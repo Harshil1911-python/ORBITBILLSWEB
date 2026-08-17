@@ -190,24 +190,20 @@
       _notifReady = true; return true;
     }catch(e){ return false; }
   }
-  /** Ask for notification permission (call from a button tap). Required for PWA phone alerts. */
   window.__orbitEnableNotifications = async function(){
     try{
       if(hasCap()){
         var ok = await ensureNotifChannel();
-        try{ localStorage.setItem("orbit_notif_enabled", ok ? "1" : "0"); }catch(e){}
+        try{ localStorage.setItem("orbit_notif_on","1"); }catch(e){}
         return !!ok;
       }
       if(typeof Notification === "undefined") return false;
-      if(Notification.permission === "granted"){
-        try{ localStorage.setItem("orbit_notif_enabled", "1"); }catch(e){}
-        return true;
-      }
+      if(Notification.permission === "granted"){ try{ localStorage.setItem("orbit_notif_on","1"); }catch(e){} return true; }
       if(Notification.permission === "denied") return false;
-      var p = await Notification.requestPermission();
-      var granted = p === "granted";
-      try{ localStorage.setItem("orbit_notif_enabled", granted ? "1" : "0"); }catch(e){}
-      return granted;
+      var perm = await Notification.requestPermission();
+      var ok = perm === "granted";
+      try{ localStorage.setItem("orbit_notif_on", ok ? "1" : "0"); }catch(e){}
+      return ok;
     }catch(e){ return false; }
   };
   window.__orbitNotify = async function(opts){
@@ -215,56 +211,27 @@
     var title = opts.title || "OrbitBills";
     var body = opts.body || "";
     var id = opts.id != null ? Number(opts.id) : (Math.floor(Date.now() % 1000000) + Math.floor(Math.random()*900));
-    var icon = opts.icon || "./app-icon-192.png";
     try{
-      /* Capacitor native — real phone notifications */
       if(hasCap()){
         var LN = plugin("LocalNotifications");
         if(!LN || !LN.schedule) return false;
         if(!_notifReady) await ensureNotifChannel();
         if(!_notifReady) return false;
-        await LN.schedule({
-          notifications: [{
-            id: id,
-            title: title,
-            body: body,
-            channelId: NOTIF_CHANNEL_ID,
-            sound: "default",
-            schedule: { at: new Date(Date.now() + 150) },
-            extra: opts.extra || {}
-          }]
-        });
+        await LN.schedule({ notifications: [{ id: id, title: title, body: body, channelId: NOTIF_CHANNEL_ID, sound: "default", schedule: { at: new Date(Date.now() + 200) }, extra: opts.extra || {} }] });
         return true;
       }
-      /* PWA / browser */
       if(typeof Notification === "undefined") return false;
-      if(Notification.permission === "default"){
-        /* Only auto-ask if user previously opted in */
-        try{
-          if(localStorage.getItem("orbit_notif_enabled") === "1"){
-            await Notification.requestPermission();
-          }
-        }catch(e){}
-      }
       if(Notification.permission !== "granted") return false;
-      /* Prefer Service Worker notification (works better when installed as PWA) */
       try{
         if(navigator.serviceWorker){
           var reg = await navigator.serviceWorker.ready;
           if(reg && reg.showNotification){
-            await reg.showNotification(title, {
-              body: body,
-              icon: icon,
-              badge: "./app-icon-96.png",
-              tag: "orbit-" + id,
-              renotify: true,
-              data: opts.extra || {}
-            });
+            await reg.showNotification(title, { body: body, icon: "./app-icon-192.png", badge: "./app-icon-96.png", tag: "orbit-" + id });
             return true;
           }
         }
       }catch(e){}
-      new Notification(title, { body: body, icon: icon, tag: "orbit-" + id });
+      new Notification(title, { body: body, icon: "./app-icon-192.png", tag: "orbit-" + id });
       return true;
     }catch(e){ return false; }
   };
@@ -358,49 +325,9 @@
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready);
   else ready();
   window.addEventListener("load", ready);
-
   try{
     if(!hasCap() && "serviceWorker" in navigator){
       navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(function(){});
     }
   }catch(e){}
-
-  /* PWA install prompt — call window.__orbitInstallApp() from a button */
-  var _deferredInstall = null;
-  try{
-    window.addEventListener("beforeinstallprompt", function(e){
-      try{ e.preventDefault(); }catch(err){}
-      _deferredInstall = e;
-      try{ window.dispatchEvent(new CustomEvent("orbit-install-ready")); }catch(err){}
-      try{
-        var btns = document.querySelectorAll("[data-orbit-install]");
-        for(var i=0;i<btns.length;i++){ btns[i].style.display = ""; btns[i].disabled = false; }
-      }catch(err){}
-    });
-    window.addEventListener("appinstalled", function(){
-      _deferredInstall = null;
-      try{
-        var btns = document.querySelectorAll("[data-orbit-install]");
-        for(var i=0;i<btns.length;i++){ btns[i].style.display = "none"; }
-      }catch(err){}
-    });
-  }catch(e){}
-  window.__orbitInstallApp = async function(){
-    try{
-      if(hasCap && hasCap()){ return { ok:false, reason:"already-native" }; }
-      if(_deferredInstall){
-        _deferredInstall.prompt();
-        var choice = await _deferredInstall.userChoice;
-        _deferredInstall = null;
-        return { ok: choice && choice.outcome === "accepted", reason: choice && choice.outcome };
-      }
-      // iOS / no prompt: show short instructions
-      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-      var msg = isIOS
-        ? "On iPhone: tap Share → Add to Home Screen"
-        : "In Chrome: menu ⋮ → Install app (or Add to Home screen). Open this site in Chrome first.";
-      try{ alert(msg); }catch(e){}
-      return { ok:false, reason:"manual" };
-    }catch(e){ return { ok:false, reason:String(e) }; }
-  };
 })();
