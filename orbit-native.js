@@ -285,17 +285,19 @@
       var x = document.createElement("button"); x.type = "button"; x.id = "orbitOfflineBannerClose"; x.setAttribute("aria-label", "Dismiss"); x.textContent = "\u00d7";
       x.style.cssText = "position:absolute;right:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:0;background:transparent;color:#fff;font:700 22px/1 system-ui,sans-serif;cursor:pointer;";
       x.addEventListener("click", function(e){ try{ e.preventDefault(); e.stopPropagation(); }catch(err){} try{ sessionStorage.setItem("orbit_offline_banner_dismissed", "1"); }catch(err){} bar.style.display = "none"; bar.setAttribute("data-dismissed", "1"); });
-      bar.appendChild(x); (document.body || document.documentElement).appendChild(bar);
+      bar.appendChild(x); bar.style.display = "none"; (document.body || document.documentElement).appendChild(bar);
     }
     function isDismissed(){ if(bar.getAttribute("data-dismissed") === "1") return true; try{ return sessionStorage.getItem("orbit_offline_banner_dismissed") === "1"; }catch(e){ return false; } }
     function setOnline(ok){
       if(_lastOnline === ok) return; _lastOnline = ok;
+      /* Never show the red top banner — popup only */
+      try{ bar.style.display = "none"; }catch(e){}
       if(ok){
-        bar.style.display = "none"; try{ sessionStorage.removeItem("orbit_offline_banner_dismissed"); }catch(e){} bar.removeAttribute("data-dismissed");
+        try{ sessionStorage.removeItem("orbit_offline_banner_dismissed"); }catch(e){}
+        try{ bar.removeAttribute("data-dismissed"); }catch(e){}
         try{ if(hasCap() && isLocalCapOrigin()) exportDbToNative(); }catch(e){}
         return;
       }
-      if(isDismissed()) bar.style.display = "none"; else bar.style.display = "block";
       try{ showOfflineModal(); }catch(e){}
       if(hasCap() && isOnLiveHost()){ switchToOfflineLocal(); return; }
       if(hasCap() && isLocalCapOrigin()){ try{ exportDbToNative(); }catch(e){} }

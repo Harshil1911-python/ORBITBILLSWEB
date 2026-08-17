@@ -87,6 +87,8 @@
   }catch(e){}
 })();
 </script>
+
+<style id="orbit-kill-overscroll">html,body{overscroll-behavior:none!important;overscroll-behavior-y:none!important}</style>
 </head>
 <body>
   <a href="index.html" class="brand"><span class="brand-mark"><img src="logo.png" data-orbit-logo class="orbit-logo" alt="Techserenia" onerror="this.style.display='none'"></span></a>
@@ -113,11 +115,12 @@
     <div class="back-link"><a href="index.html">Back to home</a></div>
   </div>
 
-  <div id="orbitBoot" style="display:none;position:fixed;inset:0;z-index:2147483646;background:#f5f8fe;flex-direction:column;padding:20px 16px;">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-    <div style="height:72px;border-radius:14px;background:#e8eef8;"></div>
-    <div style="height:72px;border-radius:14px;background:#e8eef8;"></div>
+  <div id="orbitBoot" style="display:none;position:fixed;inset:0;z-index:2147483646;background:#0b3d91;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+  <div style="width:96px;height:96px;border-radius:24px;overflow:hidden;margin-bottom:16px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;">
+    <img src="app-icon-192.png" alt="OrbitBills" style="width:96px;height:96px;object-fit:cover;display:block;border-radius:24px" onerror="this.onerror=null;this.src='logo.png';this.style.filter='brightness(0) invert(1)';this.style.width='56px';this.style.height='auto'">
   </div>
+  <div style="color:#fff;font-weight:700;font-size:18px;font-family:system-ui,sans-serif;margin-bottom:6px">OrbitBills</div>
+  <div style="color:rgba(255,255,255,.75);font-size:13px">Loading billing…</div>
 </div>
 <script src="Db.js"></script>
 
@@ -157,9 +160,8 @@
   function showBoot(){
     var el = document.getElementById("orbitBoot");
     if(el){
-      el.style.cssText = "display:flex!important;position:fixed;inset:0;z-index:2147483646;background:#f5f8fe;flex-direction:column;padding:20px 16px;";
-      setTimeout(hideBoot, 800);
-      setTimeout(hideBoot, 1000);
+      el.style.cssText = "display:flex!important;position:fixed;inset:0;z-index:2147483646;background:#0b3d91;flex-direction:column;align-items:center;justify-content:center;padding:24px;";
+      el.classList.add("show");
     }
   }
   function hideBoot(){

@@ -619,8 +619,8 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
     max-height:none!important;
     overflow-x:hidden!important;
     overflow-y:auto!important;
-    overscroll-behavior-y:auto!important;
-    overscroll-behavior:auto!important;
+    overscroll-behavior-y:none!important;
+    overscroll-behavior:none!important;
     -webkit-overflow-scrolling:touch!important;
     touch-action:pan-y!important;
   }
@@ -695,7 +695,8 @@ html{
   text-size-adjust:100%;
 }
 html,body{
-  overscroll-behavior-y:auto;
+  overscroll-behavior-y:none;
+  overscroll-behavior:none;
   -webkit-overflow-scrolling:touch;
 }
 body{
@@ -950,11 +951,19 @@ input,select,textarea{
   }catch(e){}
 })();
 </script>
+
+<style id="orbit-kill-overscroll">
+html, body {
+  overscroll-behavior: none !important;
+  overscroll-behavior-y: none !important;
+  overscroll-behavior-x: none !important;
+}
+</style>
 </head>
 <body>
 <div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#0b3d91;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:opacity .28s ease,visibility .28s ease;">
-  <div style="width:88px;height:88px;border-radius:22px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;margin-bottom:18px;animation:orbitPulse 1.2s ease-in-out infinite;">
-    <img data-orbit-logo src="logo.png" alt="" style="height:48px;width:auto;filter:brightness(0) invert(1);display:block" onerror="this.style.display='none'">
+  <div style="width:96px;height:96px;border-radius:24px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;margin-bottom:18px;animation:orbitPulse 1.2s ease-in-out infinite;overflow:hidden;">
+    <img src="app-icon-192.png" alt="OrbitBills" style="width:96px;height:96px;object-fit:cover;display:block;border-radius:24px" onerror="this.onerror=null;this.src='logo.png';this.style.filter='brightness(0) invert(1)';this.style.width='56px';this.style.height='auto';this.style.objectFit='contain'">
   </div>
   <div style="color:#fff;font-family:Inter,system-ui,sans-serif;font-weight:700;font-size:18px;letter-spacing:-0.02em;margin-bottom:6px">OrbitBills</div>
   <div style="color:rgba(255,255,255,.7);font-size:13px;margin-bottom:22px">Loading billing</div>
@@ -1092,8 +1101,8 @@ input,select,textarea{
       Scan
     </button>
     <input id="productSearch" placeholder="Search" autocomplete="off" inputmode="search" enterkeyhint="search">
-    <select id="categoryFilter" title="Categories" style="max-width:120px;min-width:96px">
-      <option value="">Categories</option>
+    <select id="categoryFilter" title="Category" style="max-width:120px;min-width:96px">
+      <option value="">Category</option>
     </select>
     <input id="scanField" placeholder="Barcode" style="max-width:120px" autocomplete="off">
   </div>
@@ -2277,7 +2286,7 @@ function refreshCategoryFilterOptions(){
   if(!el) return;
   const prev=el.value;
   const cats=Array.from(new Set((allProducts||[]).map(p=>String(p.category||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
-  el.innerHTML='<option value="">Categories</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  el.innerHTML='<option value="">Category</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
   if(prev && cats.includes(prev)) el.value=prev;
 }
 let productListPageSize = 80;
