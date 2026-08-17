@@ -2846,20 +2846,20 @@ document.getElementById("scanField").addEventListener("keydown",e=>{
     showScanFeedback(ok, ok ? ("Scanned · " + label) : ("No product for " + code));
     refreshScanCartTotal();
     try{ if(window.__orbitRefreshMobileCartBar) window.__orbitRefreshMobileCartBar(); }catch(e){}
-    // Resume camera after short pause so continuous scanning works
-    var box = document.getElementById("scanCameraBox");
-    if(box && box.style.display !== "none"){
+    // Keep camera running continuously — only debounce codes (no stop/start)
+    var status = document.getElementById("scanCameraStatus");
+    if(status && document.getElementById("scanCameraBox") && document.getElementById("scanCameraBox").style.display !== "none"){
+      status.textContent = ok ? ("Scanned · ready for next") : "Not found — try again";
       setTimeout(function(){
         try{
-          if(document.getElementById("scanModal") && document.getElementById("scanModal").classList.contains("open")){
-            startCamera();
-          }
+          if(status) status.textContent = "Point camera at barcode";
         }catch(e){}
-      }, 900);
-    } else {
-      // manual mode: clear input for next scan
-      var inp = document.getElementById("scanManualInput");
-      if(inp){ inp.value = ""; setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 50); }
+      }, 1200);
+    }
+    var inp = document.getElementById("scanManualInput");
+    if(inp && document.getElementById("scanManualBox") && document.getElementById("scanManualBox").style.display !== "none"){
+      inp.value = "";
+      setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 50);
     }
   }
   async function startCamera(){
@@ -2893,7 +2893,10 @@ document.getElementById("scanField").addEventListener("keydown",e=>{
               var codes=await detector.detect(v);
               if(codes && codes.length){
                 var raw=codes[0].rawValue || codes[0].rawValue===0 ? codes[0].rawValue : (codes[0].data||"");
-                if(raw){ onCode(String(raw)); return; }
+                if(raw){
+                  onCode(String(raw));
+                  // stay on continuous loop — debounce inside onCode
+                }
               }
             }
           }catch(e){}
@@ -4875,13 +4878,33 @@ window.__calcOpen = false;
         cs.style.opacity = "1";
         cs.style.zIndex = "10050";
         cs.style.display = "flex";
+        cs.style.flexDirection = "column";
         cs.style.position = "fixed";
         cs.style.left = "0";
         cs.style.right = "0";
         cs.style.bottom = "0";
+        cs.style.top = "auto";
+        cs.style.width = "100%";
         cs.style.maxHeight = "min(88dvh, 760px)";
         cs.style.background = "#fff";
+        cs.style.overflow = "auto";
       }
+      // Ensure Selected/Sale tabs work after open
+      try{
+        if(window.__orbitShowCartPanel) window.__orbitShowCartPanel("selected");
+        var tabs = document.getElementById("cartTopTabs");
+        if(tabs){
+          tabs.style.position = "sticky";
+          tabs.style.top = "0";
+          tabs.style.zIndex = "5";
+          tabs.style.background = "#fff";
+          tabs.style.pointerEvents = "auto";
+        }
+        ["cartTabSelected","cartTabSale","btnGoSaleTab","cartPanelSelected","cartPanelSale"].forEach(function(id){
+          var el = document.getElementById(id);
+          if(el){ el.style.pointerEvents = "auto"; }
+        });
+      }catch(e){}
       var bd = $("mCartBackdrop");
       if(bd){
         bd.style.display = "block";
@@ -5530,40 +5553,65 @@ window.__calcOpen = false;
     var tSel = document.getElementById("cartTabSelected");
     var tSale = document.getElementById("cartTabSale");
     if(!sel || !sale) return;
-    var isSel = which === "selected";
+    var isSel = (which === "selected");
     sel.style.display = isSel ? "block" : "none";
     sale.style.display = isSel ? "none" : "block";
-    if(tSel) tSel.classList.toggle("active", isSel);
-    if(tSale) tSale.classList.toggle("active", !isSel);
+    sel.style.visibility = "visible";
+    sale.style.visibility = "visible";
+    sel.style.pointerEvents = "auto";
+    sale.style.pointerEvents = "auto";
+    if(tSel){
+      tSel.classList.toggle("active", isSel);
+      tSel.setAttribute("aria-selected", isSel ? "true" : "false");
+      tSel.style.pointerEvents = "auto";
+    }
+    if(tSale){
+      tSale.classList.toggle("active", !isSel);
+      tSale.setAttribute("aria-selected", !isSel ? "true" : "false");
+      tSale.style.pointerEvents = "auto";
+    }
     try{
       var cs = document.getElementById("cartSide");
       if(cs) cs.scrollTop = 0;
     }catch(e){}
   }
   window.__orbitShowCartPanel = showCartPanel;
+  function onTabClick(e, which){
+    try{ e.preventDefault(); e.stopPropagation(); }catch(err){}
+    showCartPanel(which);
+  }
   function bind(){
     var tSel = document.getElementById("cartTabSelected");
     var tSale = document.getElementById("cartTabSale");
-    if(tSel && !tSel.dataset.bound){
-      tSel.dataset.bound = "1";
-      tSel.addEventListener("click", function(){ showCartPanel("selected"); });
-    }
-    if(tSale && !tSale.dataset.bound){
-      tSale.dataset.bound = "1";
-      tSale.addEventListener("click", function(){ showCartPanel("sale"); });
-    }
     var go = document.getElementById("btnGoSaleTab");
-    if(go && !go.dataset.bound){
-      go.dataset.bound = "1";
-      go.addEventListener("click", function(){ showCartPanel("sale"); });
+    // Always rebind with capture so nothing steals the click
+    if(tSel){
+      tSel.onclick = function(e){ onTabClick(e, "selected"); };
+      tSel.ontouchend = function(e){ onTabClick(e, "selected"); };
     }
-    // Default: Selected products
+    if(tSale){
+      tSale.onclick = function(e){ onTabClick(e, "sale"); };
+      tSale.ontouchend = function(e){ onTabClick(e, "sale"); };
+    }
+    if(go){
+      go.onclick = function(e){ onTabClick(e, "sale"); };
+    }
+    // sticky tab bar
+    var tabs = document.getElementById("cartTopTabs");
+    if(tabs){
+      tabs.style.position = "sticky";
+      tabs.style.top = "0";
+      tabs.style.zIndex = "20";
+      tabs.style.background = "#fff";
+      tabs.style.pointerEvents = "auto";
+    }
     showCartPanel("selected");
   }
   try{ bind(); }catch(e){}
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
   window.addEventListener("load", bind);
   setTimeout(bind, 300);
+  setTimeout(bind, 1000);
 })();
 </script>
 

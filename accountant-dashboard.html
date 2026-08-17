@@ -299,11 +299,11 @@ td{padding:9px 10px;border-bottom:1px solid var(--border)}
 <div class="layout">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo-fixed">
-      <img src="logo.png" alt="TechSerenia" onerror="this.style.display='none'">
+      <img src="logo.png" alt="OrbitBills" onerror="this.style.display='none'">
     </div>
     <div class="sidebar-scroll">
     <div class="brand">
-      <img src="logo.png" alt="TechSerenia" onerror="this.style.display='none'">
+      <img src="logo.png" alt="OrbitBills" onerror="this.style.display='none'">
     </div>
     <button class="nav-item active" data-panel="summary">Summary</button>
     <button class="nav-item" data-panel="rates">Tax by rate</button>
@@ -783,8 +783,68 @@ async function loadBalanceSheet(){
 
 
 async function loadSummary(){
-  const d = await api("/gst/summary" + qsPeriod());
-  if (!d || !d.ok) return;
+  let d = null;
+  try {
+    d = await api("/gst/summary" + qsPeriod());
+  } catch (e) {
+    console.warn("gst summary", e);
+  }
+  // Fallback: compute from IndexedDB if API empty/failed
+  if (!d || !d.ok) {
+    try {
+      if (typeof tsOpenDB === "function") await tsOpenDB();
+      const invoices = (typeof tsGetAll === "function" ? await tsGetAll("invoices") : []) || [];
+      const from = document.getElementById("fromDate").value || "";
+      const to = document.getElementById("toDate").value || "";
+      const inRange = (iso) => {
+        const day = String(iso || "").slice(0, 10);
+        if (from && day < from) return false;
+        if (to && day > to) return false;
+        return true;
+      };
+      const filtered = invoices.filter(inv => inRange(inv.created_at));
+      let totalTaxable = 0, totalTax = 0, totalInvoiceValue = 0;
+      for (const inv of filtered) {
+        const sub = Number(inv.subtotal) || 0;
+        const disc = Number(inv.discount) || 0;
+        totalTaxable += Math.max(0, sub - disc);
+        totalTax += Number(inv.tax_amount) || 0;
+        totalInvoiceValue += Number(inv.total) || 0;
+      }
+      d = {
+        ok: true,
+        invoiceCount: filtered.length,
+        totalTaxable, totalTax,
+        totalCgst: totalTax / 2, totalSgst: totalTax / 2, totalIgst: 0,
+        totalInvoiceValue,
+        b2b: { count: 0, taxable: 0, tax: 0 },
+        b2c: { count: filtered.length, taxable: totalTaxable, tax: totalTax },
+        byRate: [],
+        _allInvoices: invoices.length,
+      };
+    } catch (e2) {
+      console.warn("gst fallback", e2);
+      d = { ok: false };
+    }
+  }
+  if (!d || !d.ok) {
+    const hint = document.querySelector("#panel-summary .hint");
+    if (hint) hint.textContent = "Could not load GST data. Open Billing, complete a sale, then return here and tap Apply. Data is stored only on this device (IndexedDB).";
+    return;
+  }
+  // If zero in period but invoices exist overall, show helpful note
+  try {
+    let allCount = d._allInvoices;
+    if (allCount == null && typeof tsGetAll === "function") {
+      allCount = ((await tsGetAll("invoices")) || []).length;
+    }
+    const hint = document.querySelector("#panel-summary .hint");
+    if (hint && !(d.invoiceCount) && allCount > 0) {
+      hint.innerHTML = "No invoices in <strong>this date range</strong>, but this device has <strong>" + allCount + "</strong> invoice(s) overall. Change From/To or tap <strong>This month</strong>, then Apply.";
+    } else if (hint && !(d.invoiceCount) && !allCount) {
+      hint.innerHTML = "No invoices on this device yet. Create sales in <strong>Billing</strong>, then return here and tap Apply. All figures come from IndexedDB on this phone/browser.";
+    }
+  } catch (e) {}
   setText("sCount", d.invoiceCount || 0);
   setText("sTaxable", money(d.totalTaxable));
   setText("sTaxPay", money(d.totalTax));
@@ -923,6 +983,8 @@ document.getElementById("btnExportB2cCsv").addEventListener("click", () => {
     return;
   }
   setText("whoLabel", (who.name || who.email || "") + " · " + who.role);
+  try { if (typeof tsOpenDB === "function") await tsOpenDB(); } catch (e) {}
+  try { if (typeof tsSeedDefaults === "function") await tsSeedDefaults(); } catch (e) {}
   setMonth(0);
   await refreshAll();
 })();
