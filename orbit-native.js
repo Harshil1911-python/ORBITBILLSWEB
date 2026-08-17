@@ -371,6 +371,10 @@
     }catch(e){}
   }
 
+  try{
+    var p = (location.pathname||"").split("/").pop() || "index.html";
+    if(/\.html$/i.test(p)) localStorage.setItem("orbit_last_app_path", p);
+  }catch(e){}
   function registerServiceWorker(){
     try{
       if(hasCap()) return;

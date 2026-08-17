@@ -38,10 +38,23 @@ html, body { overscroll-behavior: none !important; overscroll-behavior-y: none !
   <div class="card">
     <h1>You're offline</h1>
     <p>No internet — that's fine. OrbitBills keeps working from this device. Your data stays here.</p>
-    <a class="btn" href="signin.html">Go to Sign in</a>
-    <a class="btn ghost" href="billing.html">Open Billing</a>
-    <a class="btn ghost" href="index.html">Home</a>
+    <a class="btn" href="./signin.html">Go to Sign in</a>
+    <a class="btn ghost" href="./billing.html">Open Billing</a>
+    <a class="btn ghost" href="./index.html">Home</a>
   </div>
   <script src="orbit-native.js"></script>
+
+<script>
+(function tryGoApp(){
+  try{
+    var last = localStorage.getItem("orbit_last_app_path") || "billing.html";
+    if(!/\.html$/i.test(last)) last = "billing.html";
+    // If SW is controlling, cached billing should load
+    if(navigator.serviceWorker && navigator.serviceWorker.controller){
+      // soft attempt: user can still tap buttons
+    }
+  }catch(e){}
+})();
+</script>
 </body>
 </html>

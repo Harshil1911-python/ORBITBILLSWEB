@@ -78,6 +78,19 @@
 <style id="orbit-overscroll-global">
 html, body { overscroll-behavior: none !important; overscroll-behavior-y: none !important; }
 </style>
+
+<script>
+(function(){
+  try{
+    if(!("serviceWorker" in navigator)) return;
+    if(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return;
+    navigator.serviceWorker.register("sw.js", { scope: "./" }).then(function(reg){
+      try{ if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"}); }catch(e){}
+    }).catch(function(){});
+  }catch(e){}
+})();
+</script>
+
 </head>
 <body>
   <a href="index.html" class="brand"><span class="brand-mark"><img src="logo.png" data-orbit-logo class="orbit-logo" alt="Techserenia" onerror="this.style.display='none'"></span></a>

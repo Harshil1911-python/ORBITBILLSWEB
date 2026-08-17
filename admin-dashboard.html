@@ -692,6 +692,19 @@ window.__orbitEnsureChart = function(){ return window.__orbitLoadScript('https:/
 <style id="orbit-overscroll-global">
 html, body { overscroll-behavior: none !important; overscroll-behavior-y: none !important; }
 </style>
+
+<script>
+(function(){
+  try{
+    if(!("serviceWorker" in navigator)) return;
+    if(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return;
+    navigator.serviceWorker.register("sw.js", { scope: "./" }).then(function(reg){
+      try{ if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"}); }catch(e){}
+    }).catch(function(){});
+  }catch(e){}
+})();
+</script>
+
 </head>
 <body>
 <div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#f5f8fe;flex-direction:column;padding:20px 16px;">

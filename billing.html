@@ -39,7 +39,7 @@ header.app-bar{background:rgba(255,255,255,.97);backdrop-filter:blur(10px);-webk
 .brand span{color:var(--muted);font-weight:500;font-size:12px;font-family:var(--font)}
 .header-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .layout{display:grid;grid-template-columns:1.25fr 1fr;min-height:calc(100vh - 52px);padding-top:calc(52px + env(safe-area-inset-top,0px))}
-.sales-side{padding:14px;border-right:1px solid var(--line);min-width:0;overflow:hidden}
+.sales-side{padding:14px;border-right:1px solid var(--line);min-width:0;overflow:visible}
 .cart-side{padding:14px;background:var(--card);display:flex;flex-direction:column;gap:4px}
 .panel-tabs{display:flex;flex-wrap:wrap;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:10px;width:fit-content;max-width:100%}
 .panel-tab{padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--muted);border:0;background:transparent;border-radius:8px;cursor:pointer}
@@ -111,8 +111,8 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
   .layout{grid-template-columns:1fr}
   .sales-side{border-right:0;border-bottom:1px solid var(--line)}
   .cart-side{position:sticky;bottom:0;max-height:55vh;overflow:auto;box-shadow:0 -4px 20px rgba(15,23,42,.08);border-radius:16px 16px 0 0;z-index:40}
-  .text-list{max-height:36vh}
-  .photo-grid{max-height:36vh}
+  .text-list{max-height:none}
+  .photo-grid{max-height:none}
   .hint{display:none}
 }
 /* Phones: bigger tap targets, collapsible cart, no-wrap header actions */
@@ -692,7 +692,8 @@ html{
   text-size-adjust:100%;
 }
 html,body{
-  overscroll-behavior-y:auto;
+  overscroll-behavior-y:none;
+  overscroll-behavior:none;
   -webkit-overflow-scrolling:touch;
 }
 body{
@@ -941,6 +942,90 @@ input,select,textarea{
 <style id="orbit-overscroll-global">
 html, body { overscroll-behavior: none !important; overscroll-behavior-y: none !important; }
 </style>
+
+<style id="orbit-pos-scroll-fix">
+/* 100% mobile POS scroll: page scrolls; logo + tools stay fixed */
+@media (max-width: 768px) {
+  html, body {
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: none !important;
+    overscroll-behavior-y: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
+  body {
+    touch-action: pan-y !important;
+  }
+  body.m-cart-open, body.m-menu-open {
+    overflow: hidden !important;
+  }
+  .layout {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+  }
+  .sales-side {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+  /* Logo header stays fixed (already) */
+  header.app-bar {
+    position: fixed !important;
+    top: 0; left: 0; right: 0;
+    z-index: 65 !important;
+  }
+  /* Scan / search / categories / OOS / expiring — stick under logo, do not scroll away */
+  .m-sticky-tools {
+    position: sticky !important;
+    top: calc(54px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 45 !important;
+    background: #f8fafc !important;
+    padding: 8px 12px !important;
+    margin: 0 -10px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+  /* All product panels: expand with page, no inner max-height trap */
+  .sales-panel,
+  #textPanel, #photoPanel, #heldPanel, #recentPanel,
+  .text-list, .photo-grid, #textList, #photoGrid, #heldList, #recentList {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
+  .text-row, .photo-tile, #heldList .text-row, #recentList .text-row {
+    touch-action: pan-y !important;
+  }
+  /* Filter modes still use same lists — ensure page can grow */
+  body.pos-filter-active .text-list,
+  body.pos-filter-active .photo-grid {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+</style>
+
+
+<script>
+(function(){
+  try{
+    if(!("serviceWorker" in navigator)) return;
+    if(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return;
+    navigator.serviceWorker.register("sw.js", { scope: "./" }).then(function(reg){
+      try{ if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"}); }catch(e){}
+    }).catch(function(){});
+  }catch(e){}
+})();
+</script>
+
 </head>
 <body>
 <div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#0b3d91;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:opacity .28s ease,visibility .28s ease;">
