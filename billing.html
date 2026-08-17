@@ -910,7 +910,6 @@ input,select,textarea{
 #orbitBoot .sk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
 #orbitBoot .sk-tile{height:72px;border-radius:14px;background:linear-gradient(90deg,#e8eef8 25%,#f5f8fe 50%,#e8eef8 75%);background-size:200% 100%;animation:skShimmer 1.1s ease-in-out infinite;}
 @keyframes skShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-100%{background-position:-200% 0}}
 
 
   .panel-switch{position:relative;margin:8px 0 4px;padding:0 4px;}
@@ -1202,7 +1201,8 @@ input,select,textarea{
 <style id="orbit-cart-sheet-fix">
 @media (max-width: 768px) {
   /* No full-screen dim — backdrop is invisible and only closes on tap above sheet */
-  #mCartBackdrop.m-cart-backdrop,
+  /* CRITICAL: only when cart open — ID selector alone was blocking ALL clicks */
+  body.m-cart-open #mCartBackdrop.m-cart-backdrop,
   body.m-cart-open #mCartBackdrop {
     display: block !important;
     position: fixed !important;
@@ -1213,6 +1213,13 @@ input,select,textarea{
     pointer-events: auto !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+  }
+  body:not(.m-cart-open) #mCartBackdrop,
+  body:not(.m-cart-open) #mCartBackdrop.m-cart-backdrop {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    z-index: -1 !important;
   }
   /* Cart sheet: full brightness, above everything */
   body.m-cart-open #cartSide.cart-side,
@@ -1299,25 +1306,36 @@ input,select,textarea{
   function killBoot(){
     try{
       var el = document.getElementById("orbitBoot");
-      if(!el || el.getAttribute("data-done")==="1") return;
+      if(!el) return;
+      if(el.getAttribute("data-done")==="1"){
+        try{ el.style.display="none"; el.style.pointerEvents="none"; }catch(e){}
+        return;
+      }
       el.setAttribute("data-done","1");
+      el.classList.add("orbit-boot-done");
       el.style.opacity = "0";
       el.style.visibility = "hidden";
       el.style.pointerEvents = "none";
+      el.style.display = "none";
       setTimeout(function(){
         try{
           el.style.display = "none";
+          el.style.pointerEvents = "none";
           if(el.parentNode) el.parentNode.removeChild(el);
         }catch(e){}
-      }, 300);
+      }, 200);
     }catch(e){}
   }
   window.__orbitHideBoot = killBoot;
+  // Aggressive hide — never leave a full-screen blocker
+  setTimeout(killBoot, 80);
+  setTimeout(killBoot, 250);
   setTimeout(killBoot, 500);
   setTimeout(killBoot, 900);
   setTimeout(killBoot, 1400);
-  document.addEventListener("DOMContentLoaded", function(){ setTimeout(killBoot, 350); });
-  window.addEventListener("load", function(){ setTimeout(killBoot, 120); });
+  setTimeout(killBoot, 2500);
+  document.addEventListener("DOMContentLoaded", function(){ setTimeout(killBoot, 50); setTimeout(killBoot, 200); });
+  window.addEventListener("load", function(){ setTimeout(killBoot, 30); setTimeout(killBoot, 150); });
 })();
 </script>
 
@@ -1980,6 +1998,44 @@ function buildInvoiceExportDocument(inv, paper){
 })();
 <\/script>
 
+
+
+<script>
+/* Click-safety: never leave cart/menu overlays blocking the POS after load */
+(function(){
+  function clearBlockers(){
+    try{
+      document.body.classList.remove("m-cart-open");
+      document.body.classList.remove("m-menu-open");
+      var bd = document.getElementById("mCartBackdrop");
+      if(bd){
+        bd.style.display = "none";
+        bd.style.pointerEvents = "none";
+        bd.style.visibility = "hidden";
+      }
+      var menu = document.getElementById("mobileMenu");
+      if(menu){
+        menu.classList.remove("open");
+        menu.setAttribute("aria-hidden","true");
+      }
+      var boot = document.getElementById("orbitBoot");
+      if(boot){
+        boot.setAttribute("data-done","1");
+        boot.classList.add("orbit-boot-done");
+        boot.style.display = "none";
+        boot.style.pointerEvents = "none";
+      }
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }catch(e){}
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", clearBlockers);
+  else clearBlockers();
+  window.addEventListener("load", clearBlockers);
+  setTimeout(clearBlockers, 100);
+  setTimeout(clearBlockers, 600);
+})();
+</script>
 
 </body></html>`;
 }
