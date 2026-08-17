@@ -26,6 +26,20 @@ def static_page(page):
     return send_from_directory(BASE_DIR, "404error.html"), 404
 
 
+
+@app.route("/manifest.webmanifest")
+@app.route("/manifest.json")
+def web_manifest():
+    path = os.path.join(BASE_DIR, "manifest.webmanifest")
+    if not os.path.isfile(path):
+        path = os.path.join(BASE_DIR, "manifest.json")
+    return send_from_directory(BASE_DIR, os.path.basename(path), mimetype="application/manifest+json")
+
+
+@app.route("/sw.js")
+def service_worker():
+    return send_from_directory(BASE_DIR, "sw.js", mimetype="application/javascript")
+
 @app.route("/Db.js")
 def db_js():
     return send_from_directory(BASE_DIR, "Db.js")

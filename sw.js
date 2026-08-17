@@ -8,7 +8,7 @@ const ASSETS = [
   './favicon.ico', './app-icon-96.png', './app-icon-192.png', './app-icon-512.png',
   './logo.png', './orbit-icon.png', './calc.png', './calc-256.png',
   './splash-boot.png', './splash-loading.png', './ts-element-512.png',
-  './manifest.webmanifest', './techserenia_users.json',
+  './manifest.webmanifest', './manifest.json', './app-icon-512-maskable.png', './app-icon-192-maskable.png', './techserenia_users.json',
   './aboutus.html', './contact.html', './privacy-policy.html', './terms-of-use.html'
 ];
 

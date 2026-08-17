@@ -3,12 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="app-icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="OrbitBills">
 <meta name="theme-color" content="#0b3d91">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>OrbitBills · TechSerenia</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="app-icon-192.png">
 <link rel="icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
 <style>
@@ -302,7 +305,12 @@
 </style>
 
 <script>
-(function(){try{if("serviceWorker"in navigator){navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(function(){});}}catch(e){}})();
+(function(){
+  try{
+    if(!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(function(){});
+  }catch(e){}
+})();
 </script>
 </head>
 <body>
@@ -422,5 +430,45 @@
   </script>
   <script src="orbit-assets.js"></script>
   <script src="orbit-native.js"></script>
+
+<section style="max-width:420px;margin:28px auto 12px;padding:0 16px;text-align:center">
+  <button type="button" id="orbitInstallBtn" data-orbit-install
+    style="width:100%;min-height:48px;border:0;border-radius:12px;background:#0b3d91;color:#fff;font-weight:700;font-size:15px;cursor:pointer">
+    Install OrbitBills app
+  </button>
+  <p style="margin-top:10px;font-size:13px;color:#64748b;line-height:1.45">
+    Android Chrome: tap the button, or menu <strong>⋮ → Install app</strong>.<br>
+    iPhone Safari: Share → <strong>Add to Home Screen</strong>.
+  </p>
+</section>
+<script>
+(function(){
+  var deferred = null;
+  var btn = document.getElementById("orbitInstallBtn");
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault();
+    deferred = e;
+    if(btn){ btn.style.display = "block"; btn.textContent = "Install OrbitBills app"; }
+  });
+  window.addEventListener("appinstalled", function(){
+    deferred = null;
+    if(btn) btn.textContent = "App installed";
+  });
+  if(btn) btn.addEventListener("click", async function(){
+    if(deferred){
+      deferred.prompt();
+      try{ await deferred.userChoice; }catch(e){}
+      deferred = null;
+      return;
+    }
+    var ua = navigator.userAgent || "";
+    var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    alert(ios
+      ? "On iPhone: tap Share, then Add to Home Screen."
+      : "If Install is not in the menu yet: stay on this page a few seconds with internet, then open Chrome menu ⋮ again. Or use Add to Home screen.");
+  });
+})();
+</script>
+
 </body>
 </html>
