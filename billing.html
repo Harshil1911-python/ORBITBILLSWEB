@@ -411,21 +411,22 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
   #stockSummary > div{border-radius:12px}
 
   .m-sticky-tools{
-    position:fixed!important;
-    top:calc(54px + env(safe-area-inset-top, 0px))!important;
-    left:0;right:0;
-    z-index:55;
-    background:#f8fafc;padding:8px 12px 8px;
-    margin:0;
+    position:relative!important;
+    top:auto!important;
+    left:auto!important;
+    right:auto!important;
+    z-index:1;
+    background:#f8fafc;padding:8px 0 8px;
+    margin:0 0 6px;
     border-bottom:1px solid #e2e8f0;
-    box-shadow:0 1px 0 rgba(15,23,42,.04);
+    box-shadow:none;
   }
-  /* Spacer so product lists start below fixed tools (search + filters) */
+  /* Tools scroll with products — no fixed spacer */
   .sales-side{
-    padding-top:108px!important;
+    padding-top:0!important;
   }
   body.pos-tools-hidden .m-sticky-tools{display:none!important}
-  body.pos-tools-hidden .sales-side{padding-top:8px!important}
+  body.pos-tools-hidden .sales-side{padding-top:0!important}
   /* Top Products/Photos/Held/Recent removed — use bottom nav instead */
   .m-sticky-tools .panel-tabs{display:none!important;margin:0;height:0;overflow:hidden;padding:0;border:0}
   .m-sticky-tools .search-bar{margin-bottom:6px;margin-top:0}
@@ -969,7 +970,7 @@ input,select,textarea{
 @media (max-width: 768px) {
   :root {
     --pos-header-h: calc(54px + env(safe-area-inset-top, 0px));
-    --pos-tools-h: 108px;
+    --pos-tools-h: 0px;
     --pos-bottom-h: calc(108px + env(safe-area-inset-bottom, 0px));
   }
 
@@ -1003,18 +1004,18 @@ input,select,textarea{
     z-index: 65 !important;
   }
 
-  /* Scan / search / category / Out of stock / Expiring — fixed under logo */
+  /* Scan / search / category / Out of stock / Expiring — scroll with product list */
   .m-sticky-tools {
-    position: fixed !important;
-    top: var(--pos-header-h) !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 55 !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    z-index: 1 !important;
     background: #f8fafc !important;
-    padding: 8px 12px 8px !important;
-    margin: 0 !important;
+    padding: 8px 0 8px !important;
+    margin: 0 0 6px !important;
     border-bottom: 1px solid #e2e8f0 !important;
-    box-shadow: 0 1px 0 rgba(15,23,42,.04);
+    box-shadow: none !important;
   }
 
   /* Layout fills viewport under header; no page scroll */
@@ -1035,7 +1036,7 @@ input,select,textarea{
     touch-action: pan-y !important;
   }
 
-  /* THE scroll surface — products / photos / held / recent */
+  /* THE scroll surface — tools + products / photos / held / recent */
   .sales-side {
     position: absolute !important;
     top: 0 !important;
@@ -1047,7 +1048,7 @@ input,select,textarea{
     max-height: none !important;
     margin: 0 !important;
     padding: 0 10px 16px !important;
-    padding-top: var(--pos-tools-h) !important; /* clear fixed tools */
+    padding-top: 0 !important; /* tools are in normal flow and scroll */
     overflow-x: hidden !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
@@ -1060,7 +1061,7 @@ input,select,textarea{
     display: none !important;
   }
   body.pos-tools-hidden .sales-side {
-    padding-top: 8px !important;
+    padding-top: 0 !important;
   }
 
   /* Lists must grow with content; scroll happens on .sales-side */
