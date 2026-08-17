@@ -6,7 +6,7 @@ const ASSETS = [
   './offline.html', './404error.html',
   './Db.js', './orbit-native.js', './orbit-assets.js', './qrcode.min.js',
   './favicon.ico', './app-icon-96.png', './app-icon-192.png', './app-icon-512.png',
-  './logo.png', './calc.png', './calc-256.png',
+  './logo.png', './orbit-icon.png', './calc.png', './calc-256.png',
   './splash-boot.png', './splash-loading.png', './ts-element-512.png',
   './manifest.webmanifest', './techserenia_users.json',
   './aboutus.html', './contact.html', './privacy-policy.html', './terms-of-use.html'
