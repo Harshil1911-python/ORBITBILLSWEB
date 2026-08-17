@@ -965,29 +965,36 @@ input,select,textarea{
 </script>
 
 <style id="orbit-scroll-fix">
-/* Mobile POS: fixed logo header + fixed scan/category/filters; lists scroll */
+/* Mobile POS: fixed chrome + ONE internal scroller for product lists */
 @media (max-width: 768px) {
-  html {
-    height: auto !important;
-    min-height: 100% !important;
-    max-height: none !important;
+  :root {
+    --pos-header-h: calc(54px + env(safe-area-inset-top, 0px));
+    --pos-tools-h: 108px;
+    --pos-bottom-h: calc(108px + env(safe-area-inset-bottom, 0px));
   }
+
   html, body {
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    height: auto !important;
-    min-height: 100% !important;
-    max-height: none !important;
-    overscroll-behavior-y: none;
+    height: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important; /* lock page; lists scroll inside .sales-side */
+    overscroll-behavior: none !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-y !important;
+    padding-top: 0 !important;
+    margin: 0 !important;
   }
+  body {
+    padding-top: 0 !important;
+  }
+
   body.m-cart-open,
   body.m-menu-open {
     overflow: hidden !important;
   }
 
-  /* Logo / header stays fixed */
+  /* Logo panel — fixed */
   header.app-bar {
     position: fixed !important;
     top: 0 !important;
@@ -996,10 +1003,10 @@ input,select,textarea{
     z-index: 65 !important;
   }
 
-  /* Scan, search, category, Out of stock, Expiring — fixed under header */
+  /* Scan / search / category / Out of stock / Expiring — fixed under logo */
   .m-sticky-tools {
     position: fixed !important;
-    top: calc(54px + env(safe-area-inset-top, 0px)) !important;
+    top: var(--pos-header-h) !important;
     left: 0 !important;
     right: 0 !important;
     z-index: 55 !important;
@@ -1010,25 +1017,45 @@ input,select,textarea{
     box-shadow: 0 1px 0 rgba(15,23,42,.04);
   }
 
-  /* Content clears fixed header + tools so lists are fully scrollable */
+  /* Layout fills viewport under header; no page scroll */
   .layout {
-    min-height: auto !important;
+    position: fixed !important;
+    top: var(--pos-header-h) !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: var(--pos-bottom-h) !important;
+    width: 100% !important;
     height: auto !important;
+    min-height: 0 !important;
     max-height: none !important;
-    overflow: visible !important;
-    padding-top: 0 !important;
-    padding-bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    display: block !important;
     touch-action: pan-y !important;
   }
+
+  /* THE scroll surface — products / photos / held / recent */
   .sales-side {
-    overflow: visible !important;
-    max-height: none !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
     height: auto !important;
-    /* ~ tools height (search row + filter chips) */
-    padding-top: 108px !important;
-    padding-bottom: 12px !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 10px 16px !important;
+    padding-top: var(--pos-tools-h) !important; /* clear fixed tools */
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
     touch-action: pan-y !important;
+    border: 0 !important;
   }
+
   body.pos-tools-hidden .m-sticky-tools {
     display: none !important;
   }
@@ -1036,6 +1063,7 @@ input,select,textarea{
     padding-top: 8px !important;
   }
 
+  /* Lists must grow with content; scroll happens on .sales-side */
   .sales-panel,
   #textPanel, #photoPanel, #heldPanel, #recentPanel,
   .text-list, .photo-grid,
@@ -1050,6 +1078,67 @@ input,select,textarea{
   .photo-tile, .text-row,
   #heldList .text-row, #recentList .text-row {
     touch-action: pan-y !important;
+  }
+
+  /* Cart is a sheet — keep out of the scroll column */
+  body:not(.m-cart-open) .cart-side {
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
+}
+</style>
+<script id="orbit-scroll-fix-js">
+(function(){
+  function measureTools(){
+    try{
+      if(!window.matchMedia || !window.matchMedia("(max-width:768px)").matches) return;
+      var tools = document.getElementById("mStickyTools");
+      var h = 0;
+      if(tools && tools.style.display !== "none" && !document.body.classList.contains("pos-tools-hidden")){
+        var r = tools.getBoundingClientRect();
+        h = Math.ceil(r.height || 0);
+      }
+      if(h < 40) h = 108; // fallback before paint
+      document.documentElement.style.setProperty("--pos-tools-h", h + "px");
+    }catch(e){}
+  }
+  function boot(){
+    measureTools();
+    setTimeout(measureTools, 50);
+    setTimeout(measureTools, 300);
+    setTimeout(measureTools, 800);
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+  window.addEventListener("resize", measureTools);
+  window.addEventListener("orientationchange", function(){ setTimeout(measureTools, 100); });
+  // Re-measure when switching panels (tools show/hide)
+  var _orig;
+  document.addEventListener("click", function(){ setTimeout(measureTools, 30); }, true);
+  // Keep tools class in sync if other code only toggles display
+  var obs = new MutationObserver(function(){ measureTools(); });
+  document.addEventListener("DOMContentLoaded", function(){
+    var tools = document.getElementById("mStickyTools");
+    if(tools) obs.observe(tools, { attributes: true, attributeFilter: ["style", "class"] });
+  });
+})();
+</script>
+
+<style id="orbit-scroll-fix-final">
+@media (max-width: 768px) {
+  html, body { overflow: hidden !important; height: 100dvh !important; max-height: 100dvh !important; padding-top: 0 !important; }
+  .sales-side {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+  }
+  .text-list, .photo-grid, #textList, #photoGrid, #heldList, #recentList,
+  .sales-panel, #textPanel, #photoPanel, #heldPanel, #recentPanel {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 }
 </style>
