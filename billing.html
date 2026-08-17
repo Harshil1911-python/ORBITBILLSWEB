@@ -411,11 +411,21 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
   #stockSummary > div{border-radius:12px}
 
   .m-sticky-tools{
-    position:sticky;top:0;z-index:40;
+    position:fixed!important;
+    top:calc(54px + env(safe-area-inset-top, 0px))!important;
+    left:0;right:0;
+    z-index:55;
     background:#f8fafc;padding:8px 12px 8px;
-    margin:0 -12px;
+    margin:0;
     border-bottom:1px solid #e2e8f0;
+    box-shadow:0 1px 0 rgba(15,23,42,.04);
   }
+  /* Spacer so product lists start below fixed tools (search + filters) */
+  .sales-side{
+    padding-top:108px!important;
+  }
+  body.pos-tools-hidden .m-sticky-tools{display:none!important}
+  body.pos-tools-hidden .sales-side{padding-top:8px!important}
   /* Top Products/Photos/Held/Recent removed — use bottom nav instead */
   .m-sticky-tools .panel-tabs{display:none!important;margin:0;height:0;overflow:hidden;padding:0;border:0}
   .m-sticky-tools .search-bar{margin-bottom:6px;margin-top:0}
@@ -955,11 +965,12 @@ input,select,textarea{
 </script>
 
 <style id="orbit-scroll-fix">
-/* Enable page scroll; only dampen browser pull-to-refresh */
+/* Mobile POS: fixed logo header + fixed scan/category/filters; lists scroll */
 @media (max-width: 768px) {
   html {
     height: auto !important;
     min-height: 100% !important;
+    max-height: none !important;
   }
   html, body {
     overflow-x: hidden !important;
@@ -975,8 +986,56 @@ input,select,textarea{
   body.m-menu-open {
     overflow: hidden !important;
   }
-  .layout,
-  .sales-side,
+
+  /* Logo / header stays fixed */
+  header.app-bar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 65 !important;
+  }
+
+  /* Scan, search, category, Out of stock, Expiring — fixed under header */
+  .m-sticky-tools {
+    position: fixed !important;
+    top: calc(54px + env(safe-area-inset-top, 0px)) !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 55 !important;
+    background: #f8fafc !important;
+    padding: 8px 12px 8px !important;
+    margin: 0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    box-shadow: 0 1px 0 rgba(15,23,42,.04);
+  }
+
+  /* Content clears fixed header + tools so lists are fully scrollable */
+  .layout {
+    min-height: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-top: 0 !important;
+    padding-bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important;
+    touch-action: pan-y !important;
+  }
+  .sales-side {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    /* ~ tools height (search row + filter chips) */
+    padding-top: 108px !important;
+    padding-bottom: 12px !important;
+    touch-action: pan-y !important;
+  }
+  body.pos-tools-hidden .m-sticky-tools {
+    display: none !important;
+  }
+  body.pos-tools-hidden .sales-side {
+    padding-top: 8px !important;
+  }
+
   .sales-panel,
   #textPanel, #photoPanel, #heldPanel, #recentPanel,
   .text-list, .photo-grid,
@@ -984,12 +1043,13 @@ input,select,textarea{
     max-height: none !important;
     height: auto !important;
     overflow: visible !important;
+    overflow-y: visible !important;
     -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
   }
-  .m-sticky-tools {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 40;
+  .photo-tile, .text-row,
+  #heldList .text-row, #recentList .text-row {
+    touch-action: pan-y !important;
   }
 }
 </style>
@@ -2476,9 +2536,13 @@ document.getElementById("btnFilterClear")?.addEventListener("click",()=>setPosLi
     if(panelId === "heldPanel" && typeof loadHeld === "function"){ try{ loadHeld(); }catch(e){} }
     if(panelId === "recentPanel" && typeof renderRecentList === "function"){ try{ renderRecentList(); }catch(e){} }
     var tools = document.getElementById("mStickyTools");
+    var showTools = (panelId === "textPanel" || panelId === "photoPanel");
     if(tools){
-      tools.style.display = (panelId === "textPanel" || panelId === "photoPanel") ? "" : "none";
+      tools.style.display = showTools ? "" : "none";
     }
+    try{
+      document.body.classList.toggle("pos-tools-hidden", !showTools);
+    }catch(e){}
     try{ window.scrollTo(0, 0); }catch(e){}
   }
   function openCalculator(){
