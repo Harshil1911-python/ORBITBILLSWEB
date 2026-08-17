@@ -515,25 +515,46 @@ async function computeFinancials(){
   const from = document.getElementById("fromDate").value || "";
   const to = document.getElementById("toDate").value || "";
   let invoices = [], products = [], purchases = [], payments = [], drawings = [], returns = [], clients = [], ledger = [];
+
+  // Ensure IndexedDB is ready
   try {
-    if (typeof tsGetAll === "function") {
-      invoices = await tsGetAll("invoices") || [];
-      products = await tsGetAll("products") || [];
-      clients = await tsGetAll("clients") || [];
-      payments = await tsGetAll("payments") || [];
-    }
-    if (typeof tsGetAllSafe === "function") {
-      purchases = await tsGetAllSafe("purchases") || [];
-      drawings = await tsGetAllSafe("drawings") || [];
-      returns = await tsGetAllSafe("returns") || [];
-      ledger = await tsGetAllSafe("cash_ledger") || [];
-    } else {
-      try { purchases = await tsGetAll("purchases") || []; } catch(e){}
-      try { drawings = await tsGetAll("drawings") || []; } catch(e){}
-      try { returns = await tsGetAll("returns") || []; } catch(e){}
-      try { ledger = await tsGetAll("cash_ledger") || []; } catch(e){}
-    }
+    if (typeof tsOpenDB === "function") await tsOpenDB();
+    else if (typeof tsSeedDefaults === "function") await tsSeedDefaults();
+  } catch (e) { console.warn("db open", e); }
+
+  async function readStore(name){
+    try {
+      if (typeof tsGetAllSafe === "function") return await tsGetAllSafe(name) || [];
+      if (typeof tsGetAll === "function") return await tsGetAll(name) || [];
+    } catch (e) { console.warn("read", name, e); }
+    return [];
+  }
+
+  try {
+    invoices = await readStore("invoices");
+    products = await readStore("products");
+    clients = await readStore("clients");
+    payments = await readStore("payments");
+    purchases = await readStore("purchases");
+    drawings = await readStore("drawings");
+    returns = await readStore("returns");
+    ledger = await readStore("cash_ledger");
   } catch (e) { console.warn("computeFinancials data", e); }
+
+  // Fallback via local API if direct stores empty but API works
+  if (!invoices.length) {
+    try {
+      const d = await api("/gst/summary" + qsPeriod());
+      if (d && d.ok && d.invoiceCount) {
+        // still need line items for COGS — try invoices endpoint
+      }
+      if (typeof tsLocalApi === "function") {
+        const inv = await tsLocalApi("/invoices", { method: "GET" });
+        if (inv && inv.invoices) invoices = inv.invoices;
+        if (inv && inv.ok && inv.items) invoices = inv.items || invoices;
+      }
+    } catch (e) {}
+  }
 
   const prodById = {};
   for (const p of products) prodById[p.id] = p;
@@ -541,11 +562,10 @@ async function computeFinancials(){
   const periodInvs = invoices.filter(inv => inPeriod(inv.created_at, from, to));
   const asOfInvs = invoices.filter(inv => upTo(inv.created_at, to || "9999-12-31"));
 
-  // --- P&L period ---
   let salesGross = 0, salesTaxable = 0, salesTax = 0, discountTotal = 0;
   let paidSales = 0, unpaidBal = 0;
   let cogs = 0;
-  let invCount = periodInvs.length;
+  const invCount = periodInvs.length;
   for (const inv of periodInvs) {
     const total = Number(inv.total) || 0;
     const tax = Number(inv.tax_amount) || 0;
@@ -556,16 +576,21 @@ async function computeFinancials(){
     salesTax += tax;
     discountTotal += disc;
     const paid = Number(inv.amount_paid) || 0;
-    if (String(inv.status || "").toLowerCase() === "paid") paidSales += total;
+    const st = String(inv.status || "").toLowerCase();
+    if (st === "paid") paidSales += total;
     else unpaidBal += Math.max(0, total - paid);
-    for (const it of (inv.items || [])) {
+    const items = inv.items || inv.lines || [];
+    for (const it of items) {
       const qty = Number(it.qty) || 0;
       const pid = it.product_id ?? it.productId;
       const p = pid != null ? prodById[pid] : null;
-      const cost = p ? (Number(p.cost_price) || 0) : 0;
+      let cost = 0;
+      if (p) cost = Number(p.cost_price ?? p.costPrice ?? p.cost) || 0;
+      if (!cost && it.cost != null) cost = Number(it.cost) || 0;
       cogs += qty * cost;
     }
   }
+
   let returnsTotal = 0;
   for (const r of returns) {
     if (!inPeriod(r.created_at || r.date, from, to)) continue;
@@ -584,14 +609,12 @@ async function computeFinancials(){
     if (!inPeriod(d.created_at, from, to)) continue;
     drawingsPeriod += Number(d.amount) || 0;
   }
-  // Operating expense: drawings only (purchases are inventory, already in COGS via cost)
   const expenses = drawingsPeriod;
   const netProfit = grossProfit - expenses;
 
-  // --- Balance sheet as of `to` ---
   let inventoryValue = 0;
   for (const p of products) {
-    inventoryValue += (Number(p.stock) || 0) * (Number(p.cost_price) || 0);
+    inventoryValue += (Number(p.stock) || 0) * (Number(p.cost_price ?? p.costPrice ?? p.cost) || 0);
   }
   let receivables = 0;
   for (const inv of asOfInvs) {
@@ -601,31 +624,27 @@ async function computeFinancials(){
     if (st === "paid") continue;
     receivables += Math.max(0, total - paid);
   }
-  // Cash estimate: opening + cash ledger net up to `to`
+
   let cash = 0;
   try {
     if (typeof tsGetSetting === "function") {
       cash = Number(await tsGetSetting("cash_opening_balance", "0")) || 0;
     }
-  } catch(e){}
-  for (const row of ledger) {
-    if (!upTo(row.created_at, to || "9999-12-31")) continue;
-    const t = String(row.type || "").toLowerCase();
-    const amt = Number(row.amount) || 0;
-    if (t === "opening_balance") { cash = amt; continue; }
-    if (t === "sale" || t === "cash_sale" || t === "payment" || t === "in" || t === "receipt") cash += amt;
-    else if (t === "drawing" || t === "drawings" || t === "out" || t === "expense" || t === "purchase" || t === "adjust") cash -= Math.abs(amt);
-    else if (t === "day_end") { /* ignore snapshot */ }
-    else cash += amt; // generic signed
-  }
-  // Also fold cash payments on invoices if ledger sparse
-  if (!ledger.length) {
-    cash = Number(cash) || 0;
+  } catch (e) {}
+  if (ledger && ledger.length) {
+    for (const row of ledger) {
+      if (!upTo(row.created_at, to || "9999-12-31")) continue;
+      const t = String(row.type || "").toLowerCase();
+      const amt = Number(row.amount) || 0;
+      if (t === "opening_balance") { cash = amt; continue; }
+      if (t === "sale" || t === "cash_sale" || t === "payment" || t === "in" || t === "receipt") cash += Math.abs(amt);
+      else if (t === "drawing" || t === "drawings" || t === "out" || t === "expense" || t === "purchase" || t === "adjust") cash -= Math.abs(amt);
+      else if (t === "day_end") { /* snapshot */ }
+      else cash += amt;
+    }
+  } else {
     for (const inv of asOfInvs) {
-      if (String(inv.status||"").toLowerCase() === "paid" || Number(inv.amount_paid) > 0) {
-        // assume portion cash unknown — use amount_paid as cash proxy only if no ledger
-        cash += Number(inv.amount_paid) || 0;
-      }
+      cash += Number(inv.amount_paid) || 0;
     }
     for (const d of drawings) {
       if (upTo(d.created_at, to || "9999-12-31")) cash -= Number(d.amount) || 0;
@@ -633,22 +652,16 @@ async function computeFinancials(){
   }
   if (cash < 0) cash = 0;
 
-  // GST liability working: tax on period sales (approx outstanding)
-  let gstLiability = 0;
-  for (const inv of asOfInvs) gstLiability += Number(inv.tax_amount) || 0;
-  // simplified: use period tax as current liability proxy
-  gstLiability = salesTax;
-
+  const gstLiability = salesTax;
   const totalAssets = cash + inventoryValue + receivables;
   const totalLiab = gstLiability;
   const equity = totalAssets - totalLiab;
 
   return {
-    from, to,
-    invCount, salesGross, salesTaxable, salesTax, discountTotal, returnsTotal, netSales,
+    from, to, invCount, salesGross, salesTaxable, salesTax, discountTotal, returnsTotal, netSales,
     cogs, grossProfit, purchasesPeriod, drawingsPeriod, expenses, netProfit,
-    paidSales, unpaidBal,
-    cash, inventoryValue, receivables, gstLiability, totalAssets, totalLiab, equity,
+    paidSales, unpaidBal, cash, inventoryValue, receivables, gstLiability, totalAssets, totalLiab, equity,
+    _meta: { productCount: products.length, invoiceTotal: invoices.length }
   };
 }
 
@@ -669,6 +682,10 @@ async function loadPnl(){
   setText("pnlInvCount", f.invCount);
   const body = document.getElementById("pnlBody");
   if (!body) return;
+  if (!f.invCount && !(f._meta && f._meta.invoiceTotal)) {
+    body.innerHTML = '<tr><td colspan="2" style="color:var(--slate);padding:16px">No invoices in IndexedDB for this period. Open <strong>Billing</strong>, complete a sale, then click <strong>Apply</strong> here. Set <strong>cost price</strong> on products in Admin for accurate COGS / profit.</td></tr>';
+    return;
+  }
   const lines = [];
   lines.push(rowHtml("Sales (invoice value)", f.salesGross, { strong: true }));
   if (f.returnsTotal) lines.push(rowHtml("Less: Returns / credit notes", -f.returnsTotal, { indent: true }));

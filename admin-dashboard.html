@@ -1413,9 +1413,11 @@ window.__orbitEnsureChart = function(){ return window.__orbitLoadScript('https:/
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;">
           <button type="button" class="btn btn-primary btn-sm" id="generateCodeBtn">Generate</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="downloadCodeBtn">Download PNG</button>
           <button type="button" class="btn btn-ghost btn-sm" id="saveCodeBtn">Save design</button>
           <button type="button" class="btn btn-ghost btn-sm" id="printCodeBtn">Print</button>
           <button type="button" class="btn btn-ghost btn-sm" id="openScannerBtn">Open camera scanner</button>
+          <button type="button" class="btn btn-primary btn-sm" id="showAllProductCodesBtn">All product barcodes / QR</button>
         </div>
         <canvas id="codePreviewCanvas" width="240" height="260" style="border:1px solid var(--border);border-radius:10px;background:#fff;"></canvas>
         <div class="msg" id="codeMsg"></div>
@@ -1428,6 +1430,18 @@ window.__orbitEnsureChart = function(){ return window.__orbitLoadScript('https:/
           <tbody id="savedCodesBody"></tbody>
         </table>
         </div>
+      </div>
+      <div class="card" id="allProductCodesCard">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <h3 style="margin:0">All product barcodes / QR</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-ghost btn-sm" id="refreshProductCodesBtn">Refresh</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="downloadAllCodesBtn">Download all (ZIP of PNGs)</button>
+          </div>
+        </div>
+        <p class="hint">Codes use each product’s barcode, or SKU, or id. Click a card to download that PNG. Scanner looks up the same fields in IndexedDB.</p>
+        <div id="allProductCodesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px"></div>
+        <div class="msg" id="allCodesMsg"></div>
       </div>
       <div class="card">
         <h3>Phone / USB scanner</h3>
@@ -2328,6 +2342,8 @@ window.__orbitEnsureChart = function(){ return window.__orbitLoadScript('https:/
     </div>
     <div class="modal-actions">
       <button type="button" class="btn btn-ghost" onclick="closeModal('barcodeModal')">Close</button>
+      <button type="button" class="btn btn-ghost" id="downloadBarcodeBtn">Download barcode</button>
+      <button type="button" class="btn btn-ghost" id="downloadQrBtn">Download QR</button>
       <button type="button" class="btn btn-primary" id="printBarcodeBtn">Print</button>
     </div>
   </div>
@@ -5633,39 +5649,105 @@ document.getElementById("sendLowStockAlertBtn")?.addEventListener("click", async
 // =========================================================================
 // BARCODE / QR
 // =========================================================================
-function drawSimpleBarcode(canvas, text){
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = "#000";
-  const code = String(text || "0000");
-  let x = 10;
-  for (let i = 0; i < code.length; i++) {
-    const n = code.charCodeAt(i) % 7 + 1;
-    for (let b = 0; b < n; b++) {
-      if (b % 2 === 0) ctx.fillRect(x, 10, 2, 50);
-      x += 2;
+/** Code 128B barcode encoder + canvas renderer (no external lib). */
+const CODE128_B = (function(){
+  // Patterns: 0=space(white), 1=bar(black) widths for 6 modules; value 0-106
+  const PAT = [
+    "212222","222122","222221","121223","121322","131222","122213","122312","132212","221213",
+    "221312","231212","112232","122132","122231","113222","123122","123221","223211","221132",
+    "221231","213212","223112","312131","311222","321122","321221","312212","322112","322211",
+    "212123","212321","232121","111323","131123","131321","112313","132113","132311","211313",
+    "231113","231311","112133","112331","132131","113123","113321","133121","313121","211331",
+    "231131","213113","213311","213131","311123","311321","331121","312113","312311","332111",
+    "314111","221411","431111","111224","111422","121124","121421","141122","141221","112214",
+    "112412","122114","122411","142112","142211","241211","221114","413111","241112","134111",
+    "111242","121142","121241","114212","124112","124211","411212","421112","421211","212141",
+    "214121","412121","111143","111341","131141","114113","114311","411113","411311","113141",
+    "114131","311141","411131","211412","211214","211232","2331112"
+  ];
+  function encode(text){
+    text = String(text || "");
+    if (!text) text = "0";
+    // Code set B start = 104
+    let sum = 104;
+    const values = [104];
+    for (let i = 0; i < text.length; i++) {
+      let c = text.charCodeAt(i);
+      if (c < 32 || c > 126) c = 63; // ?
+      const v = c - 32;
+      values.push(v);
+      sum += v * (i + 1);
     }
-    x += 2;
+    values.push(sum % 103); // checksum
+    values.push(106); // stop
+    return values.map(v => PAT[v] || PAT[0]);
   }
-  ctx.font = "12px monospace";
-  ctx.fillText(code, 10, 72);
+  function draw(canvas, text, opts){
+    opts = opts || {};
+    const fg = opts.fg || "#000000";
+    const bg = opts.bg || "#ffffff";
+    const showText = opts.showText !== false;
+    const patterns = encode(text);
+    // total modules
+    let modules = 0;
+    for (const p of patterns) for (const ch of p) modules += parseInt(ch, 10);
+    modules += 2; // quiet zone-ish
+    const pad = 12;
+    const barH = opts.barHeight || 60;
+    const textH = showText ? 18 : 0;
+    const w = Math.max(canvas.width || 240, modules * 2 + pad * 2);
+    const h = barH + textH + 16;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    const unit = (w - pad * 2) / modules;
+    let x = pad;
+    let bar = true; // start with bar for first width of first pattern — Code128 patterns alternate starting with bar
+    ctx.fillStyle = fg;
+    for (const p of patterns) {
+      for (let i = 0; i < p.length; i++) {
+        const width = parseInt(p[i], 10) * unit;
+        if (bar) ctx.fillRect(Math.floor(x), 8, Math.ceil(width), barH);
+        x += width;
+        bar = !bar;
+      }
+    }
+    if (showText) {
+      ctx.fillStyle = fg;
+      ctx.font = "12px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(String(text), w / 2, barH + 20);
+      ctx.textAlign = "left";
+    }
+  }
+  return { encode, draw };
+})();
+
+function drawSimpleBarcode(canvas, text, opts){
+  CODE128_B.draw(canvas, text, opts || {});
 }
 async function showBarcode(productId){
   const p = productsCache.find(x => x.id === productId);
   if (!p) return;
   const code = p.barcode || p.sku || String(p.id);
   document.getElementById("barcodeLabel").textContent = p.name + " — " + code;
-  drawSimpleBarcode(document.getElementById("barcodeCanvas"), code);
+  drawSimpleBarcode(document.getElementById("barcodeCanvas"), code, { barHeight: 56 });
   const qrCanvas = document.getElementById("qrCanvas");
-  if (window.QRCode) {
-    try {
-      await QRCode.toCanvas(qrCanvas, code, { width: 160, margin: 1 });
-    } catch (e) {
+  try {
+    if (typeof tsDrawQrToCanvas === "function") {
+      await tsDrawQrToCanvas(qrCanvas, code, { size: 160 });
+    } else {
+      await tsWaitForQrLib(2000);
+      // fallback: matrix draw already inside tsDrawQrToCanvas; minimal text fallback
       const ctx = qrCanvas.getContext("2d");
-      ctx.fillStyle = "#eee"; ctx.fillRect(0,0,160,160);
-      ctx.fillStyle = "#333"; ctx.font = "12px sans-serif"; ctx.fillText(code, 10, 80);
+      qrCanvas.width = 160; qrCanvas.height = 160;
+      ctx.fillStyle = "#fff"; ctx.fillRect(0,0,160,160);
+      ctx.fillStyle = "#111"; ctx.font = "11px monospace"; ctx.fillText(code.slice(0,18), 8, 80);
     }
+  } catch (e) {
+    console.warn("QR draw", e);
   }
   openModal("barcodeModal");
 }
@@ -6154,39 +6236,160 @@ async function generateDesignedCode(){
   const type = document.getElementById("codeType").value;
   const payload = document.getElementById("codePayload").value.trim();
   const size = parseInt(document.getElementById("codeSize").value) || 220;
-  const fg = document.getElementById("codeFg").value;
-  const bg = document.getElementById("codeBg").value;
+  const fg = document.getElementById("codeFg").value || "#0b3d91";
+  const bg = document.getElementById("codeBg").value || "#ffffff";
   const canvas = document.getElementById("codePreviewCanvas");
   const msg = document.getElementById("codeMsg");
   if (!payload) { msg.textContent = "Enter content first."; msg.className = "msg error"; return; }
-  canvas.width = size;
-  canvas.height = size + 28;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  if (type === "qr" && window.QRCode) {
-    const tmp = document.createElement("canvas");
-    await QRCode.toCanvas(tmp, payload, { width: size, margin: 2, color: { dark: fg, light: bg } });
-    ctx.drawImage(tmp, 0, 0);
-  } else {
-    // simple barcode bars
-    ctx.fillStyle = fg;
-    let x = 12;
-    for (let i = 0; i < payload.length; i++) {
-      const n = payload.charCodeAt(i) % 6 + 1;
-      for (let b = 0; b < n; b++) {
-        if (b % 2 === 0) ctx.fillRect(x, 16, 2, size - 40);
-        x += 2;
+  try {
+    if (type === "qr") {
+      canvas.width = size;
+      canvas.height = size + 28;
+      const tmp = document.createElement("canvas");
+      await tsDrawQrToCanvas(tmp, payload, { size: size });
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // recolor if needed by drawing black QR then multiply — keep black QR for scannability
+      ctx.drawImage(tmp, 0, 0, size, size);
+      if (fg && fg.toLowerCase() !== "#000000" && fg.toLowerCase() !== "#000") {
+        // optional tint: leave as black for reliable scans
       }
-      x += 2;
+      ctx.fillStyle = fg;
+      ctx.font = "12px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(payload.length > 28 ? payload.slice(0, 28) + "…" : payload, size / 2, size + 18);
+      ctx.textAlign = "left";
+    } else {
+      // Code 128 barcode
+      drawSimpleBarcode(canvas, payload, { fg: fg, bg: bg, barHeight: Math.max(40, size - 80), showText: true });
+      // ensure watermark space
+      const pad = document.createElement("canvas");
+      pad.width = canvas.width;
+      pad.height = canvas.height + 20;
+      const pctx = pad.getContext("2d");
+      pctx.fillStyle = bg;
+      pctx.fillRect(0, 0, pad.width, pad.height);
+      pctx.drawImage(canvas, 0, 0);
+      canvas.width = pad.width;
+      canvas.height = pad.height;
+      canvas.getContext("2d").drawImage(pad, 0, 0);
     }
-    ctx.font = "12px monospace";
-    ctx.fillText(payload, 12, size - 12);
+    if (typeof applyPermanentWatermark === "function") applyPermanentWatermark(canvas);
+    msg.textContent = "Generated · scannable " + (type === "qr" ? "QR" : "Code 128") + ".";
+    msg.className = "msg success";
+  } catch (e) {
+    msg.textContent = "Generate failed: " + (e.message || e);
+    msg.className = "msg error";
+    console.warn(e);
   }
-  applyPermanentWatermark(canvas);
-  msg.textContent = "Generated with permanent watermark."; msg.className = "msg success";
 }
+
+function downloadCanvasPng(canvas, filename){
+  if (!canvas) return;
+  const a = document.createElement("a");
+  a.href = canvas.toDataURL("image/png");
+  a.download = filename || "code.png";
+  a.click();
+}
+
 document.getElementById("generateCodeBtn")?.addEventListener("click", generateDesignedCode);
+document.getElementById("downloadCodeBtn")?.addEventListener("click", () => {
+  const canvas = document.getElementById("codePreviewCanvas");
+  const name = (document.getElementById("codeName")?.value || "code").replace(/[^\w\-]+/g, "_");
+  downloadCanvasPng(canvas, name + ".png");
+});
+document.getElementById("downloadBarcodeBtn")?.addEventListener("click", () => {
+  downloadCanvasPng(document.getElementById("barcodeCanvas"), "barcode.png");
+});
+document.getElementById("downloadQrBtn")?.addEventListener("click", () => {
+  downloadCanvasPng(document.getElementById("qrCanvas"), "qr.png");
+});
+
+function productCodeValue(p){
+  return String((p && (p.barcode || p.sku || p.id)) || "").trim();
+}
+
+async function renderAllProductCodes(){
+  const grid = document.getElementById("allProductCodesGrid");
+  const msg = document.getElementById("allCodesMsg");
+  if (!grid) return;
+  grid.innerHTML = "<p class='hint'>Loading products…</p>";
+  try {
+    if (typeof renderProducts === "function") await renderProducts();
+  } catch(e){}
+  let list = productsCache || [];
+  if (!list.length && typeof tsGetAll === "function") {
+    try { list = await tsGetAll("products") || []; productsCache = list; } catch(e){}
+  }
+  if (!list.length) {
+    grid.innerHTML = "<p class='hint'>No products in IndexedDB yet. Add products first.</p>";
+    return;
+  }
+  grid.innerHTML = "";
+  for (const p of list) {
+    const code = productCodeValue(p);
+    const card = document.createElement("div");
+    card.style.cssText = "border:1px solid var(--border);border-radius:12px;padding:10px;background:#fff;text-align:center";
+    const title = document.createElement("div");
+    title.style.cssText = "font-size:12px;font-weight:600;margin-bottom:6px;min-height:32px";
+    title.textContent = p.name || ("#" + p.id);
+    const sub = document.createElement("div");
+    sub.style.cssText = "font-size:11px;color:var(--slate);margin-bottom:8px;word-break:break-all";
+    sub.textContent = code;
+    const bc = document.createElement("canvas");
+    bc.width = 160; bc.height = 70;
+    bc.style.cssText = "width:100%;max-width:160px;height:auto;margin:0 auto 6px;display:block";
+    drawSimpleBarcode(bc, code, { barHeight: 42, showText: true });
+    const qr = document.createElement("canvas");
+    qr.width = 120; qr.height = 120;
+    qr.style.cssText = "width:120px;height:120px;margin:0 auto 8px;display:block";
+    try { await tsDrawQrToCanvas(qr, code, { size: 120 }); } catch(e){}
+    const actions = document.createElement("div");
+    actions.style.cssText = "display:flex;gap:6px;justify-content:center;flex-wrap:wrap";
+    const dlB = document.createElement("button");
+    dlB.type = "button"; dlB.className = "btn btn-ghost btn-sm"; dlB.textContent = "Barcode";
+    dlB.onclick = () => downloadCanvasPng(bc, (p.sku || p.id || "item") + "-barcode.png");
+    const dlQ = document.createElement("button");
+    dlQ.type = "button"; dlQ.className = "btn btn-ghost btn-sm"; dlQ.textContent = "QR";
+    dlQ.onclick = () => downloadCanvasPng(qr, (p.sku || p.id || "item") + "-qr.png");
+    actions.appendChild(dlB); actions.appendChild(dlQ);
+    card.appendChild(title); card.appendChild(sub); card.appendChild(bc); card.appendChild(qr); card.appendChild(actions);
+    grid.appendChild(card);
+  }
+  if (msg) { msg.textContent = list.length + " products · codes ready to download"; msg.className = "msg success"; }
+}
+
+document.getElementById("showAllProductCodesBtn")?.addEventListener("click", async () => {
+  // switch to codes panel if needed
+  const nav = document.querySelector('.nav-item[data-panel="codes"]');
+  if (nav) nav.click();
+  const card = document.getElementById("allProductCodesCard");
+  if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+  await renderAllProductCodes();
+});
+document.getElementById("refreshProductCodesBtn")?.addEventListener("click", () => renderAllProductCodes());
+document.getElementById("downloadAllCodesBtn")?.addEventListener("click", async () => {
+  const msg = document.getElementById("allCodesMsg");
+  if (msg) { msg.textContent = "Preparing downloads…"; msg.className = "msg"; }
+  if (typeof renderProducts === "function") await renderProducts();
+  const list = productsCache || [];
+  // sequential downloads (browsers limit parallel)
+  for (const p of list) {
+    const code = productCodeValue(p);
+    const bc = document.createElement("canvas");
+    drawSimpleBarcode(bc, code, { barHeight: 56 });
+    downloadCanvasPng(bc, (p.sku || p.id || "item") + "-barcode.png");
+    const qr = document.createElement("canvas");
+    try {
+      await tsDrawQrToCanvas(qr, code, { size: 256 });
+      downloadCanvasPng(qr, (p.sku || p.id || "item") + "-qr.png");
+    } catch(e){}
+    await new Promise(r => setTimeout(r, 120));
+  }
+  if (msg) { msg.textContent = "Download started for " + list.length + " products (barcode + QR each)."; msg.className = "msg success"; }
+});
+
 document.getElementById("printCodeBtn")?.addEventListener("click", () => {
   generateDesignedCode().then(() => window.print());
 });
@@ -6252,18 +6455,41 @@ document.getElementById("scanInput")?.addEventListener("keydown", e => {
 });
 async function handleScannedCode(code){
   if (!code) return;
+  code = String(code).trim();
   const msg = document.getElementById("scanMsg");
-  // look up product by barcode or sku
-  await renderProducts();
-  const p = (productsCache||[]).find(x =>
-    (x.barcode && x.barcode === code) || (x.sku && x.sku === code) || String(x.id) === code
+  try { if (typeof renderProducts === "function") await renderProducts(); } catch(e){}
+  let list = productsCache || [];
+  if (!list.length && typeof tsGetAll === "function") {
+    try { list = await tsGetAll("products") || []; productsCache = list; } catch(e){}
+  }
+  let p = list.find(x =>
+    (x.barcode && String(x.barcode) === code) ||
+    (x.sku && String(x.sku) === code) ||
+    String(x.id) === code
   );
+  // variants
+  if (!p && typeof tsGetAll === "function") {
+    try {
+      const variants = await tsGetAll("product_variants") || [];
+      const v = variants.find(x =>
+        (x.barcode && String(x.barcode) === code) ||
+        (x.sku && String(x.sku) === code) ||
+        String(x.id) === code
+      );
+      if (v) {
+        p = list.find(x => Number(x.id) === Number(v.product_id)) || {
+          id: v.product_id, name: (v.name || "Variant") + " (variant)", stock: v.stock, price: v.price, barcode: v.barcode, sku: v.sku
+        };
+      }
+    } catch(e){}
+  }
   if (p) {
-    msg.textContent = `Found: ${p.name} · stock ${p.stock} · price ${money(p.price)}`;
+    msg.textContent = `Found: ${p.name} · stock ${p.stock} · price ${money(p.price)} · code ${code}`;
     msg.className = "msg success";
     document.getElementById("codePayload").value = code;
+    try { await showBarcode(p.id); } catch(e){}
   } else {
-    msg.textContent = `No product for "${code}". Payload placed in designer.`;
+    msg.textContent = `No product for "${code}" in IndexedDB. Payload placed in designer — Generate to create a code.`;
     msg.className = "msg";
     document.getElementById("codePayload").value = code;
   }
