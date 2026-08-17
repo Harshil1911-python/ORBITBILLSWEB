@@ -936,14 +936,21 @@ input,select,textarea{
 
 
 <style id="orbit-boot-css">
+/* Boot is a brief splash only — NEVER stay on top blocking clicks */
 #orbitBoot{
-  display:flex!important;position:fixed!important;inset:0!important;z-index:2147483646!important;
-  background:#f5f8fe!important;flex-direction:column;padding:20px 16px;
-  margin:0;pointer-events:auto;
+  display:none!important;
+  position:fixed!important;inset:0!important;z-index:2147483646!important;
+  background:#ffffff!important;flex-direction:column;padding:20px 16px;
+  margin:0;pointer-events:none!important;visibility:hidden!important;opacity:0!important;
+}
+/* Optional short show (only if class .show is added before hide) */
+#orbitBoot.show:not(.orbit-boot-done):not([data-done="1"]){
+  display:flex!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important;
 }
 #orbitBoot.orbit-boot-done,
 #orbitBoot[data-done="1"]{
   display:none!important;visibility:hidden!important;pointer-events:none!important;opacity:0!important;
+  z-index:-1!important;
 }
 #orbitBoot .sk-line,#orbitBoot .sk-avatar,#orbitBoot .sk-tile{
   background:linear-gradient(90deg,#e8eef8 25%,#f5f8fe 50%,#e8eef8 75%);background-size:200% 100%;
@@ -1276,9 +1283,48 @@ input,select,textarea{
 }
 </style>
 
+
+<style id="orbit-click-safety">
+/* Guarantee no invisible full-screen layer steals clicks */
+#orbitBoot,
+#orbitBoot.orbit-boot-done,
+#orbitBoot[data-done="1"]{
+  display:none!important;pointer-events:none!important;visibility:hidden!important;
+  opacity:0!important;z-index:-1!important;
+}
+#mCartBackdrop,
+#mCartBackdrop.m-cart-backdrop{
+  pointer-events:none!important;
+}
+body.m-cart-open #mCartBackdrop,
+body.m-cart-open #mCartBackdrop.m-cart-backdrop{
+  display:block!important;pointer-events:auto!important;z-index:10040!important;
+  visibility:visible!important;
+}
+body:not(.m-cart-open) #mCartBackdrop,
+body:not(.m-cart-open) #mCartBackdrop.m-cart-backdrop{
+  display:none!important;pointer-events:none!important;visibility:hidden!important;z-index:-1!important;
+}
+/* Modals only capture when .open */
+.modal-bg{pointer-events:none!important;}
+.modal-bg.open{display:flex!important;pointer-events:auto!important;}
+/* Mobile menu only when open */
+.mobile-menu{pointer-events:none!important;}
+.mobile-menu.open{pointer-events:auto!important;}
+/* Buttons / interactive always receive events */
+button,.btn,.panel-tab,.pos-nav-item,.text-row,.photo-tile,
+input,select,textarea,a,[role="button"],.cart-top-tab{
+  pointer-events:auto!important;
+}
+/* Mobile product list: whole row adds — keep that; do not block row */
+@media (max-width:768px){
+  #textList .text-row{pointer-events:auto!important;cursor:pointer;}
+}
+</style>
+
 </head>
 <body>
-<div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#ffffff;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:opacity .28s ease,visibility .28s ease;">
+<div id="orbitBoot" data-done="1" class="orbit-boot-done" style="display:none!important;position:fixed;inset:0;z-index:-1;background:#ffffff;flex-direction:column;align-items:center;justify-content:center;padding:24px;pointer-events:none!important;visibility:hidden;opacity:0;">
   <img src="logo.png" alt="OrbitBills" style="width:120px;height:120px;object-fit:contain;display:block;margin-bottom:18px;animation:orbitPulse 1.2s ease-in-out infinite" onerror="this.onerror=null;this.src='app-icon-192.png'">
   <div style="color:#000;font-family:Inter,system-ui,sans-serif;font-weight:700;font-size:18px;letter-spacing:-0.02em;margin-bottom:6px">OrbitBills</div>
   <div style="color:#000;font-size:13px;margin-bottom:22px;opacity:.7">Loading billing</div>
@@ -2000,40 +2046,47 @@ function buildInvoiceExportDocument(inv, paper){
 
 
 
+
+
 <script>
-/* Click-safety: never leave cart/menu overlays blocking the POS after load */
+/* Click-safety: remove boot/backdrop blockers once so all buttons work */
 (function(){
-  function clearBlockers(){
+  var done = false;
+  function clearBlockers(forceBootOnly){
     try{
-      document.body.classList.remove("m-cart-open");
-      document.body.classList.remove("m-menu-open");
-      var bd = document.getElementById("mCartBackdrop");
-      if(bd){
-        bd.style.display = "none";
-        bd.style.pointerEvents = "none";
-        bd.style.visibility = "hidden";
-      }
-      var menu = document.getElementById("mobileMenu");
-      if(menu){
-        menu.classList.remove("open");
-        menu.setAttribute("aria-hidden","true");
-      }
       var boot = document.getElementById("orbitBoot");
       if(boot){
         boot.setAttribute("data-done","1");
         boot.classList.add("orbit-boot-done");
-        boot.style.display = "none";
-        boot.style.pointerEvents = "none";
+        boot.classList.remove("show");
+        boot.style.cssText = "display:none!important;pointer-events:none!important;visibility:hidden!important;opacity:0!important;z-index:-1!important;";
+        try{ if(boot.parentNode) boot.parentNode.removeChild(boot); }catch(e){}
       }
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
+      if(!forceBootOnly && !done){
+        // Only strip stuck cart/menu state on first paint — do not fight later user opens
+        if(!document.body.classList.contains("m-cart-open")){
+          var bd = document.getElementById("mCartBackdrop");
+          if(bd){
+            bd.style.display = "none";
+            bd.style.pointerEvents = "none";
+          }
+        }
+        var menu = document.getElementById("mobileMenu");
+        if(menu && !menu.classList.contains("open")){
+          menu.style.pointerEvents = "none";
+        }
+        document.body.style.pointerEvents = "auto";
+        document.documentElement.style.pointerEvents = "auto";
+        done = true;
+      }
     }catch(e){}
   }
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", clearBlockers);
-  else clearBlockers();
-  window.addEventListener("load", clearBlockers);
-  setTimeout(clearBlockers, 100);
-  setTimeout(clearBlockers, 600);
+  clearBlockers(false);
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", function(){ clearBlockers(false); });
+  window.addEventListener("load", function(){ clearBlockers(true); });
+  setTimeout(function(){ clearBlockers(true); }, 50);
+  setTimeout(function(){ clearBlockers(true); }, 300);
+  setTimeout(function(){ clearBlockers(true); }, 800);
 })();
 </script>
 
