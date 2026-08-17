@@ -1644,21 +1644,6 @@ function buildInvoiceExportDocument(inv, paper){
 <\/script>
 
 
-
-<script>
-(function(){
-  var b = document.getElementById("mmEnableNotif");
-  if(!b) return;
-  b.addEventListener("click", async function(){
-    var ok = false;
-    try{ ok = window.__orbitEnableNotifications ? await window.__orbitEnableNotifications() : false; }catch(e){}
-    alert(ok
-      ? "Notifications on. You will get alerts for new bills, low stock, and expiring products."
-      : "Could not enable. Allow notifications for this site in your phone browser settings.");
-  });
-})();
-</script>
-
 </body></html>`;
 }
 
@@ -5324,6 +5309,24 @@ window.__calcOpen = false;
   try{ document.documentElement.classList.remove("orbit-booting"); }catch(e){}
   setTimeout(function(){ try{ document.documentElement.classList.remove("orbit-booting"); }catch(e){} }, 50);
   setTimeout(function(){ try{ document.documentElement.classList.remove("orbit-booting"); if(window.__orbitHideBoot) window.__orbitHideBoot(); }catch(e){} }, 1000);
+})();
+</script>
+
+<script>
+(function(){
+  var b = document.getElementById("mmEnableNotif");
+  if(!b) return;
+  b.addEventListener("click", function(){
+    var run = window.__orbitEnableNotifications;
+    if(!run){ alert("Notifications not available."); return; }
+    Promise.resolve(run()).then(function(ok){
+      alert(ok
+        ? "Notifications on. Alerts for new bills, low stock, and expiring products."
+        : "Allow notifications for this site in your phone browser settings.");
+    }).catch(function(){
+      alert("Could not enable notifications.");
+    });
+  });
 })();
 </script>
 </body>
