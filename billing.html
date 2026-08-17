@@ -42,7 +42,7 @@ header.app-bar{background:rgba(255,255,255,.97);backdrop-filter:blur(10px);-webk
 .brand span{color:var(--muted);font-weight:500;font-size:12px;font-family:var(--font)}
 .header-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .layout{display:grid;grid-template-columns:1.25fr 1fr;min-height:calc(100vh - 52px);padding-top:calc(52px + env(safe-area-inset-top,0px))}
-.sales-side{padding:14px;border-right:1px solid var(--line);min-width:0;overflow:hidden}
+.sales-side{padding:14px;border-right:1px solid var(--line);min-width:0;overflow:visible}
 .cart-side{padding:14px;background:var(--card);display:flex;flex-direction:column;gap:4px}
 .panel-tabs{display:flex;flex-wrap:wrap;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:10px;width:fit-content;max-width:100%}
 .panel-tab{padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--muted);border:0;background:transparent;border-radius:8px;cursor:pointer}
@@ -114,8 +114,8 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
   .layout{grid-template-columns:1fr}
   .sales-side{border-right:0;border-bottom:1px solid var(--line)}
   .cart-side{position:sticky;bottom:0;max-height:55vh;overflow:auto;box-shadow:0 -4px 20px rgba(15,23,42,.08);border-radius:16px 16px 0 0;z-index:40}
-  .text-list{max-height:36vh}
-  .photo-grid{max-height:36vh}
+  .text-list{max-height:none}
+  .photo-grid{max-height:none}
   .hint{display:none}
 }
 /* Phones: bigger tap targets, collapsible cart, no-wrap header actions */
@@ -635,21 +635,21 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
     overflow:visible!important;
     touch-action:pan-y!important;
   }
-  .sales-side, .sales-panel, #photoPanel, #textPanel{
+  .sales-side, .sales-panel, #photoPanel, #textPanel, #heldPanel, #recentPanel{
     overflow:visible!important;
     max-height:none!important;
     height:auto!important;
     touch-action:pan-y!important;
     padding-bottom:4px!important;
   }
-  .text-list, .photo-grid, #textList, #photoGrid{
+  .text-list, .photo-grid, #textList, #photoGrid, #heldList, #recentList{
     max-height:none!important;
     height:auto!important;
     overflow:visible!important;
     overflow-y:visible!important;
     touch-action:pan-y!important;
   }
-  .photo-tile, .text-row{
+  .photo-tile, .text-row, #heldList .text-row, #recentList .text-row{
     touch-action:pan-y!important;
   }
   body:not(.m-cart-open) .cart-side{
@@ -709,7 +709,7 @@ body{
   user-select:none;
   -webkit-touch-callout:none;
   -webkit-tap-highlight-color:transparent;
-  touch-action:manipulation;
+  touch-action:pan-y;
 }
 /* Allow selection only where typing is needed */
 input,textarea,[contenteditable="true"],.allow-select{
@@ -738,6 +738,8 @@ a{text-decoration:none;color:inherit}
 /* Scroll containers feel native */
 .text-list,.cart-side,.photo-grid,.modal,.mobile-menu-panel,#downloadsList{
   -webkit-overflow-scrolling:touch;
+}
+.cart-side,.modal,.mobile-menu-panel,#downloadsList{
   overscroll-behavior:contain;
 }
 /* Inputs: 16px prevents iOS zoom */
@@ -952,11 +954,43 @@ input,select,textarea{
 })();
 </script>
 
-<style id="orbit-kill-overscroll">
-html, body {
-  overscroll-behavior: none !important;
-  overscroll-behavior-y: none !important;
-  overscroll-behavior-x: none !important;
+<style id="orbit-scroll-fix">
+/* Enable page scroll; only dampen browser pull-to-refresh */
+@media (max-width: 768px) {
+  html {
+    height: auto !important;
+    min-height: 100% !important;
+  }
+  html, body {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
+  body.m-cart-open,
+  body.m-menu-open {
+    overflow: hidden !important;
+  }
+  .layout,
+  .sales-side,
+  .sales-panel,
+  #textPanel, #photoPanel, #heldPanel, #recentPanel,
+  .text-list, .photo-grid,
+  #textList, #photoGrid, #heldList, #recentList {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .m-sticky-tools {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 40;
+  }
 }
 </style>
 </head>
