@@ -61,17 +61,3 @@ Billing shows a banner for due/overdue invoices.
 ## Accountant (GST)
 Open `accountant-dashboard.html` with the accountant preset account.
 GST summary, tax by rate, HSN, B2B/B2C and a simplified GSTR-1 JSON export — all from IndexedDB invoices on this device.
-
-
-## Offline web (Service Worker)
-- `sw.js` caches the app shell. After first online open, **hard refresh offline** still loads Billing / Admin / Sign-in.
-- Data remains in IndexedDB; SW only caches static files.
-- `manifest.webmanifest` for Add to Home Screen (standalone — less browser chrome).
-
-## Notifications
-- **Capacitor / APK**: real device LocalNotifications (no website URL in the system UI).
-- **Browser**: permission prompt always shows the site origin (Chrome cannot hide it). Request only via explicit button (`__orbitRequestNotifPermission`). Alerts for bills, low stock, and expiring stock use the shared `__orbitNotify*` helpers.
-- Install as PWA or use the Android APK for the most native feel.
-
-## Overscroll
-- `overscroll-behavior: none` is forced so Chrome pull-to-refresh / hard-refresh rubber-band scroller does not appear.

@@ -9,7 +9,7 @@
     try{ return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[n]; }catch(e){ return null; }
   }
 
-  var LIVE_URL = "https://orbitbillsweb.onrender.com";
+  var LIVE_URL = "https://orbitbillsphone.onrender.com";
   var PREFER_LIVE = false;
   var SYNC_PATH = "OrbitBills/orbit-sync-backup.json";
   var _syncBusy = false;
@@ -19,7 +19,7 @@
     try{
       var h = (location.hostname||"").toLowerCase();
       if(!h) return false;
-      return h.indexOf("onrender.com") >= 0 || h === "orbitbillsweb.onrender.com" || h === "orbitbillsphone.onrender.com" || h === "orbitbillsdemo2.onrender.com";
+      return h.indexOf("onrender.com") >= 0 || h === "orbitbillsphone.onrender.com" || h === "orbitbillsdemo2.onrender.com";
     }catch(e){ return false; }
   }
   function isLocalCapOrigin(){
@@ -181,7 +181,7 @@
   function showOfflineModal(){ try{ if(sessionStorage.getItem("orbit_offline_modal_dismissed") === "1") return; }catch(e){} ensureOfflineModal(); var wrap = document.getElementById("orbitOfflineModal"); if(wrap){ wrap.style.display = "flex"; } }
   function hideOfflineModal(){ var wrap = document.getElementById("orbitOfflineModal"); if(wrap){ wrap.style.display = "none"; } try{ sessionStorage.setItem("orbit_offline_modal_dismissed","1"); }catch(e){} }
 
-    var NOTIF_CHANNEL_ID = "orbitbills_alerts"; var _notifReady = false;
+  var NOTIF_CHANNEL_ID = "orbitbills_alerts"; var _notifReady = false;
   async function ensureNotifChannel(){
     var LN = plugin("LocalNotifications"); if(!LN) return false;
     try{
@@ -190,75 +190,8 @@
       _notifReady = true; return true;
     }catch(e){ return false; }
   }
-  /** Request permission only from a user gesture (button). Never auto-prompt on load (avoids showing site URL unexpectedly). */
-  window.__orbitRequestNotifPermission = async function(){
-    try{
-      if(hasCap()){
-        await ensureNotifChannel();
-        return _notifReady;
-      }
-      if(typeof Notification === "undefined") return false;
-      if(Notification.permission === "granted") return true;
-      if(Notification.permission === "denied") return false;
-      var p = await Notification.requestPermission();
-      return p === "granted";
-    }catch(e){ return false; }
-  };
   window.__orbitNotify = async function(opts){
-    opts = opts || {};
-    var title = opts.title || "OrbitBills";
-    var body = opts.body || "";
-    var id = opts.id != null ? Number(opts.id) : (Math.floor(Date.now() % 1000000) + Math.floor(Math.random()*900));
-    try{
-      /* Native Capacitor — true device notifications, no website URL in the UI */
-      if(hasCap()){
-        var LN = plugin("LocalNotifications");
-        if(!LN || !LN.schedule) return false;
-        if(!_notifReady) await ensureNotifChannel();
-        if(!_notifReady) return false;
-        await LN.schedule({
-          notifications: [{
-            id: id,
-            title: title,
-            body: body,
-            channelId: NOTIF_CHANNEL_ID,
-            sound: "default",
-            schedule: { at: new Date(Date.now() + 150) },
-            extra: opts.extra || {}
-          }]
-        });
-        return true;
-      }
-      /* Web: only fire if already granted — never requestPermission here (that prompt shows the domain) */
-      if(typeof Notification === "undefined" || Notification.permission !== "granted") return false;
-      if(navigator.serviceWorker && navigator.serviceWorker.controller){
-        navigator.serviceWorker.controller.postMessage({
-          type: "NOTIFY",
-          title: title,
-          body: body,
-          id: id,
-          tag: "orbit-" + id,
-          icon: "./app-icon-192.png",
-          extra: opts.extra || {}
-        });
-        return true;
-      }
-      if(navigator.serviceWorker && navigator.serviceWorker.ready){
-        var reg = await navigator.serviceWorker.ready;
-        if(reg && reg.showNotification){
-          await reg.showNotification(title, {
-            body: body,
-            icon: "./app-icon-192.png",
-            badge: "./app-icon-96.png",
-            tag: "orbit-" + id
-          });
-          return true;
-        }
-      }
-      new Notification(title, { body: body, icon: "./app-icon-192.png", tag: "orbit-" + id });
-      return true;
-    }catch(e){ return false; }
-  }; var title = opts.title || "OrbitBills"; var body = opts.body || ""; var id = opts.id != null ? Number(opts.id) : (Math.floor(Date.now() % 1000000) + Math.floor(Math.random()*900));
+    opts = opts || {}; var title = opts.title || "OrbitBills"; var body = opts.body || ""; var id = opts.id != null ? Number(opts.id) : (Math.floor(Date.now() % 1000000) + Math.floor(Math.random()*900));
     try{
       if(!hasCap()){ if(typeof Notification !== "undefined"){ if(Notification.permission === "default") await Notification.requestPermission(); if(Notification.permission === "granted"){ new Notification(title, { body: body, icon: "logo.png", tag: "orbit-"+id }); return true; } } return false; }
       var LN = plugin("LocalNotifications"); if(!LN || !LN.schedule) return false; if(!_notifReady) await ensureNotifChannel();
@@ -352,58 +285,13 @@
     if(App && App.addListener){ App.addListener("backButton", function(){ var handled = false; try{ handled = !!window.__orbitAndroidBack(); }catch(e){} if(!handled && App.exitApp) App.exitApp(); }); }
   }
 
-  function lockOverscroll(){
-    try{
-      var css = "html,body{overscroll-behavior:none!important;overscroll-behavior-y:none!important;-webkit-overflow-scrolling:touch;}";
-      var s = document.getElementById("orbitOverscrollLock");
-      if(!s){
-        s = document.createElement("style");
-        s.id = "orbitOverscrollLock";
-        (document.head || document.documentElement).appendChild(s);
-      }
-      s.textContent = css;
-      document.documentElement.style.overscrollBehavior = "none";
-      document.documentElement.style.overscrollBehaviorY = "none";
-      if(document.body){
-        document.body.style.overscrollBehavior = "none";
-        document.body.style.overscrollBehaviorY = "none";
-      }
-    }catch(e){}
-  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready);
+  else ready();
+  window.addEventListener("load", ready);
 
   try{
-    var p = (location.pathname||"").split("/").pop() || "index.html";
-    if(/\.html$/i.test(p)) localStorage.setItem("orbit_last_app_path", p);
+    if(!hasCap() && "serviceWorker" in navigator){
+      navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(function(){});
+    }
   }catch(e){}
-  function registerServiceWorker(){
-    try{
-      if(hasCap()) return;
-      if(!("serviceWorker" in navigator)) return;
-      var swUrl = "sw.js";
-      try{
-        var base = (location.pathname || "/").replace(/[^/]*$/, "");
-        if(base && base !== "/") swUrl = base + "sw.js";
-      }catch(e){}
-      navigator.serviceWorker.register(swUrl, { scope: "./" }).then(function(reg){
-        try{
-          if(reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
-          reg.addEventListener("updatefound", function(){
-            var nw = reg.installing;
-            if(!nw) return;
-            nw.addEventListener("statechange", function(){
-              if(nw.state === "installed" && navigator.serviceWorker.controller){
-                try{ nw.postMessage({ type: "SKIP_WAITING" }); }catch(e){}
-              }
-            });
-          });
-        }catch(e){}
-      }).catch(function(){});
-    }catch(e){}
-  }
-
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", function(){ lockOverscroll(); ready(); });
-  else { lockOverscroll(); ready(); }
-  window.addEventListener("load", function(){ lockOverscroll(); ready(); });
-  try{ registerServiceWorker(); }catch(e){}
-  try{ lockOverscroll(); }catch(e){}
 })();

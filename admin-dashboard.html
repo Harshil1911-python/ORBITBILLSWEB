@@ -11,9 +11,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
+<title>Admin dashboard TechSerenia</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="app-icon-192.png">
-<title>Admin dashboard TechSerenia</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -689,22 +689,10 @@ window.__orbitEnsureChart = function(){ return window.__orbitLoadScript('https:/
 @keyframes skShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 </style>
 
-<style id="orbit-overscroll-global">
-html, body { overscroll-behavior: none !important; overscroll-behavior-y: none !important; }
-</style>
 
 <script>
-(function(){
-  try{
-    if(!("serviceWorker" in navigator)) return;
-    if(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return;
-    navigator.serviceWorker.register("sw.js", { scope: "./" }).then(function(reg){
-      try{ if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"}); }catch(e){}
-    }).catch(function(){});
-  }catch(e){}
-})();
+(function(){try{if("serviceWorker"in navigator){navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(function(){});}}catch(e){}})();
 </script>
-
 </head>
 <body>
 <div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#f5f8fe;flex-direction:column;padding:20px 16px;">
@@ -6967,27 +6955,20 @@ async function tsCheckDueReminders(){
     }
     if (!hot.length) return;
     const body = hot.slice(0, 5).map(i => `${i.invoice_number}: ${i.client_name||"Walk-in"} · due ${i.due_date}`).join("\n");
-    try {
-      if (window.__orbitNotify) {
-        await window.__orbitNotify({ title: "Due invoices", body: hot.length + " invoice(s) due or overdue", id: 42010 });
-      } else if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-        new Notification("OrbitBills — due invoices", { body: hot.length + " invoice(s) due or overdue", tag: "orbitbills-due" });
-      }
-    } catch (eN) {}
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification("OrbitBills — due invoices", { body: hot.length + " invoice(s) due or overdue\n" + body, tag: "orbitbills-due" });
+    }
   } catch (e) {}
 }
 document.getElementById("btnEnableDueReminders")?.addEventListener("click", async () => {
   const msg = document.getElementById("dueReminderMsg");
-  let ok = false;
-  try {
-    if (window.__orbitRequestNotifPermission) ok = await window.__orbitRequestNotifPermission();
-    else if (typeof Notification !== "undefined") {
-      const perm = await Notification.requestPermission();
-      ok = perm === "granted";
-    }
-  } catch (e) { ok = false; }
-  if (!ok) {
-    if (msg) { msg.textContent = "Permission denied — enable notifications in phone settings (or browser settings)."; msg.className = "msg error"; }
+  if (typeof Notification === "undefined") {
+    if (msg) { msg.textContent = "Notifications not supported in this browser."; msg.className = "msg error"; }
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") {
+    if (msg) { msg.textContent = "Permission denied — enable notifications in browser settings."; msg.className = "msg error"; }
     return;
   }
   tsSetDueReminders(true);

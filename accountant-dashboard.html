@@ -10,10 +10,10 @@
 
 <meta charset="UTF-8">
 <meta name="theme-color" content="#0b3d91">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="app-icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
 <title>GST filing · TechSerenia</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="app-icon-192.png">
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -218,22 +218,10 @@ td{padding:9px 10px;border-bottom:1px solid var(--border)}
 @keyframes skShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 </style>
 
-<style id="orbit-overscroll-global">
-html, body { overscroll-behavior: none !important; overscroll-behavior-y: none !important; }
-</style>
 
 <script>
-(function(){
-  try{
-    if(!("serviceWorker" in navigator)) return;
-    if(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return;
-    navigator.serviceWorker.register("sw.js", { scope: "./" }).then(function(reg){
-      try{ if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"}); }catch(e){}
-    }).catch(function(){});
-  }catch(e){}
-})();
+(function(){try{if("serviceWorker"in navigator){navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(function(){});}}catch(e){}})();
 </script>
-
 </head>
 <body>
 <div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#f5f8fe;flex-direction:column;padding:20px 16px;">

@@ -15,10 +15,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#0b3d91">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="app-icon-192.png">
 <meta name="color-scheme" content="light">
 <title>Billing · TechSerenia</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="app-icon-192.png">
 <link rel="icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -616,8 +616,8 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
     max-height:none!important;
     overflow-x:hidden!important;
     overflow-y:auto!important;
-    overscroll-behavior-y:none!important;
-    overscroll-behavior:none!important;
+    overscroll-behavior-y:auto!important;
+    overscroll-behavior:auto!important;
     -webkit-overflow-scrolling:touch!important;
     touch-action:pan-y!important;
   }
@@ -632,21 +632,21 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
     overflow:visible!important;
     touch-action:pan-y!important;
   }
-  .sales-side, .sales-panel, #photoPanel, #textPanel{
+  .sales-side, .sales-panel, #photoPanel, #textPanel, #heldPanel, #recentPanel{
     overflow:visible!important;
     max-height:none!important;
     height:auto!important;
     touch-action:pan-y!important;
     padding-bottom:4px!important;
   }
-  .text-list, .photo-grid, #textList, #photoGrid{
+  .text-list, .photo-grid, #textList, #photoGrid, #heldList, #recentList{
     max-height:none!important;
     height:auto!important;
     overflow:visible!important;
     overflow-y:visible!important;
     touch-action:pan-y!important;
   }
-  .photo-tile, .text-row{
+  .photo-tile, .text-row, #heldList .text-row, #recentList .text-row{
     touch-action:pan-y!important;
   }
   body:not(.m-cart-open) .cart-side{
@@ -706,7 +706,7 @@ body{
   user-select:none;
   -webkit-touch-callout:none;
   -webkit-tap-highlight-color:transparent;
-  touch-action:manipulation;
+  touch-action:pan-y;
 }
 /* Allow selection only where typing is needed */
 input,textarea,[contenteditable="true"],.allow-select{
@@ -939,93 +939,10 @@ input,select,textarea{
   to { opacity: 1; transform: translateY(0); }
 }
 </style>
-<style id="orbit-overscroll-global">
-html, body { overscroll-behavior: none !important; overscroll-behavior-y: none !important; }
-</style>
-
-<style id="orbit-pos-scroll-fix">
-/* 100% mobile POS scroll: page scrolls; logo + tools stay fixed */
-@media (max-width: 768px) {
-  html, body {
-    height: auto !important;
-    min-height: 100% !important;
-    max-height: none !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: none !important;
-    overscroll-behavior-y: none !important;
-    -webkit-overflow-scrolling: touch !important;
-    touch-action: pan-y !important;
-  }
-  body {
-    touch-action: pan-y !important;
-  }
-  body.m-cart-open, body.m-menu-open {
-    overflow: hidden !important;
-  }
-  .layout {
-    overflow: visible !important;
-    height: auto !important;
-    max-height: none !important;
-    min-height: auto !important;
-  }
-  .sales-side {
-    overflow: visible !important;
-    max-height: none !important;
-    height: auto !important;
-  }
-  /* Logo header stays fixed (already) */
-  header.app-bar {
-    position: fixed !important;
-    top: 0; left: 0; right: 0;
-    z-index: 65 !important;
-  }
-  /* Scan / search / categories / OOS / expiring — stick under logo, do not scroll away */
-  .m-sticky-tools {
-    position: sticky !important;
-    top: calc(54px + env(safe-area-inset-top, 0px)) !important;
-    z-index: 45 !important;
-    background: #f8fafc !important;
-    padding: 8px 12px !important;
-    margin: 0 -10px !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-  }
-  /* All product panels: expand with page, no inner max-height trap */
-  .sales-panel,
-  #textPanel, #photoPanel, #heldPanel, #recentPanel,
-  .text-list, .photo-grid, #textList, #photoGrid, #heldList, #recentList {
-    max-height: none !important;
-    height: auto !important;
-    overflow: visible !important;
-    overflow-y: visible !important;
-    -webkit-overflow-scrolling: touch !important;
-    touch-action: pan-y !important;
-  }
-  .text-row, .photo-tile, #heldList .text-row, #recentList .text-row {
-    touch-action: pan-y !important;
-  }
-  /* Filter modes still use same lists — ensure page can grow */
-  body.pos-filter-active .text-list,
-  body.pos-filter-active .photo-grid {
-    max-height: none !important;
-    overflow: visible !important;
-  }
-}
-</style>
-
 
 <script>
-(function(){
-  try{
-    if(!("serviceWorker" in navigator)) return;
-    if(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return;
-    navigator.serviceWorker.register("sw.js", { scope: "./" }).then(function(reg){
-      try{ if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"}); }catch(e){}
-    }).catch(function(){});
-  }catch(e){}
-})();
+(function(){try{if("serviceWorker"in navigator){navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(function(){});}}catch(e){}})();
 </script>
-
 </head>
 <body>
 <div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#0b3d91;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:opacity .28s ease,visibility .28s ease;">
