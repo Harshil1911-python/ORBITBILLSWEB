@@ -95,7 +95,7 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
 .credit-hint{font-size:12px;color:var(--ok);margin-top:2px}
 .badge{font-size:11px;color:var(--muted);background:var(--tint);border-radius:6px;padding:3px 8px}
 .cash-box{background:var(--tint);border:1px solid var(--line);border-radius:10px;padding:10px;margin:6px 0}
-.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:200;opacity:0;transition:.2s;max-width:90vw;text-align:center;pointer-events:none}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:10080;opacity:0;transition:.2s;max-width:90vw;text-align:center;pointer-events:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .low-banner{background:#fee2e2;color:var(--bad);font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:8px;display:none}
 .invoice-preview-shell{overflow:auto;max-height:65vh;background:#eef2f7;padding:12px;border-radius:10px}
@@ -317,8 +317,26 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
     transform:translateY(0)!important;
     pointer-events:auto!important;
     visibility:visible!important;
+    display:flex!important;
+    opacity:1!important;
+    z-index:10050!important;
+    position:fixed!important;
+    left:0!important;right:0!important;bottom:0!important;
+    max-height:min(88dvh, 760px)!important;
+    overflow:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    background:var(--card,#fff)!important;
   }
-  body.m-cart-open .m-cart-backdrop{display:block!important;z-index:110!important}
+  body.m-cart-open .m-cart-backdrop{
+    display:block!important;
+    z-index:10040!important;
+    pointer-events:auto!important;
+    background:rgba(15,23,42,.45)!important;
+  }
+  body.m-cart-open .m-cart-close{
+    display:inline-flex!important;
+    z-index:10060!important;
+  }
   .cart-toggle{display:none!important}
   .cart-side > h3{
     position:sticky;top:0;background:var(--card);padding:4px 0 10px;
@@ -1081,12 +1099,49 @@ input,select,textarea{
     touch-action: pan-y !important;
   }
 
-  /* Cart is a sheet — keep out of the scroll column */
+  /* Cart is a sheet — keep out of the scroll column when closed */
   body:not(.m-cart-open) .cart-side {
     pointer-events: none !important;
     visibility: hidden !important;
+    transform: translateY(110%) !important;
+  }
+  /* When open: escape layout clipping — full sheet above backdrop */
+  body.m-cart-open .cart-side {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    max-height: min(88dvh, 760px) !important;
+    transform: translateY(0) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    opacity: 1 !important;
+    z-index: 10050 !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    background: #fff !important;
+    border-radius: 18px 18px 0 0 !important;
+    box-shadow: 0 -8px 32px rgba(15,23,42,.2) !important;
+    padding: 12px 14px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  body.m-cart-open .m-cart-backdrop {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10040 !important;
+    background: rgba(15,23,42,.45) !important;
+    pointer-events: auto !important;
+  }
+  body.m-cart-open .pos-bottom-nav,
+  body.m-cart-open .m-cart-bar {
+    z-index: 10030 !important;
   }
 }
+
 </style>
 <script id="orbit-scroll-fix-js">
 (function(){
@@ -1556,6 +1611,12 @@ input,select,textarea{
       <button type="button" class="btn btn-ghost btn-block" id="scanCameraStop" style="margin-top:8px;min-height:44px">Stop camera</button>
     </div>
     <div class="msg" id="scanModalMsg" style="margin-top:6px"></div>
+    <button type="button" class="btn btn-primary btn-block" id="scanCartTotalBtn"
+      style="margin-top:12px;min-height:52px;font-size:16px;font-weight:700;border-radius:14px;display:flex;align-items:center;justify-content:space-between;padding:12px 16px"
+      onclick="try{window.__orbitCloseScanModal&&window.__orbitCloseScanModal();}catch(e){}try{window.__orbitOpenMobileCart&&window.__orbitOpenMobileCart();}catch(e){}">
+      <span>Cart total</span>
+      <span id="scanCartTotalAmt">₹0.00</span>
+    </button>
     <div class="modal-actions">
       <button class="btn btn-ghost" type="button" id="scanModalClose" data-close="scanModal">Close</button>
     </div>
@@ -2679,21 +2740,31 @@ document.getElementById("photoGrid")?.addEventListener("click",e=>{
   const pid=parseInt(tile.getAttribute("data-pid"),10);
   if(pid) addToCart(pid);
 });
-function processScanCode(code){
-  code=String(code||"").trim(); if(!code)return;
+function processScanCode(code, opts){
+  opts = opts || {};
+  const quiet = !!opts.quiet; // scanner modal shows its own "Scanned" message
+  code=String(code||"").trim(); if(!code) return { ok:false, name:"" };
   const v=allVariants.find(x=>(x.barcode&&String(x.barcode)===code)||(x.sku&&String(x.sku)===code));
   if(v){
     const parent=allProducts.find(p=>p.id===v.product_id);
+    const lineName=(parent?parent.name+" — ":"")+(v.name||"Variant");
     pushCartLine({
       productId:v.product_id, variantId:v.id,
-      name:(parent?parent.name+" — ":"")+(v.name||"Variant"),
+      name:lineName,
       price:v.price!=null?Number(v.price):(parent?priceFor(parent):0),
       qty:1, taxPercent:parent?taxFor(parent):0, unit:parent?parent.unit:"", overridden:false
     });
-    toast("Added "+(v.name||"variant")); return;
+    if(!quiet) toast("Added "+(v.name||"variant"));
+    return { ok:true, name:lineName };
   }
   const p=allProducts.find(x=>(x.barcode&&String(x.barcode)===code)||(x.sku&&String(x.sku)===code)||String(x.id)===code);
-  if(p){ addToCart(p.id); } else toast("Not found");
+  if(p){
+    addToCart(p.id);
+    if(!quiet) toast("Added "+(p.name||"item"));
+    return { ok:true, name:p.name||"item" };
+  }
+  if(!quiet) toast("Not found");
+  return { ok:false, name:"" };
 }
 document.getElementById("scanField").addEventListener("keydown",e=>{
   if(e.key!=="Enter")return; e.preventDefault();
@@ -2706,6 +2777,7 @@ document.getElementById("scanField").addEventListener("keydown",e=>{
     var m=document.getElementById("scanModal");
     if(!m) return;
     m.classList.add("open");
+    try{ refreshScanCartTotal(); }catch(e){}
     var msg=document.getElementById("scanModalMsg");
     if(msg) msg.textContent="";
     document.getElementById("scanManualBox").style.display="none";
@@ -2725,16 +2797,70 @@ document.getElementById("scanField").addEventListener("keydown",e=>{
     var v=document.getElementById("scanVideo");
     if(v){ try{ v.srcObject=null; }catch(e){} }
   }
+  function refreshScanCartTotal(){
+    try{
+      var el = document.getElementById("scanCartTotalAmt");
+      if(!el) return;
+      var totalText = "₹0.00";
+      if(typeof calc === "function"){
+        var t = calc();
+        var sym = (typeof branding !== "undefined" && branding && branding.currency_symbol) || "₹";
+        totalText = sym + Number(t.total||0).toFixed(2);
+      } else if(typeof window.__orbitRefreshMobileCartBar === "function"){
+        var gt = document.getElementById("mCartTotal");
+        if(gt && gt.textContent) totalText = gt.textContent.trim();
+      }
+      el.textContent = totalText;
+    }catch(e){}
+  }
+  function showScanFeedback(ok, text){
+    var msg = document.getElementById("scanModalMsg");
+    if(!msg) return;
+    msg.textContent = text || (ok ? "Scanned" : "Not found");
+    msg.className = "msg " + (ok ? "ok" : "err");
+    msg.style.display = "block";
+    // brief highlight
+    msg.style.transition = "none";
+    msg.style.transform = "scale(1.02)";
+    setTimeout(function(){ try{ msg.style.transform = "scale(1)"; }catch(e){} }, 120);
+  }
   function onCode(code){
     code=String(code||"").trim();
     if(!code) return;
     var now=Date.now();
     if(code===lastCode && now-lastAt<1500) return;
     lastCode=code; lastAt=now;
-    stopCamera();
-    closeModal();
-    if(typeof processScanCode==="function") processScanCode(code);
-    else if(typeof toast==="function") toast("Scanned: "+code);
+    // Keep scanner open — do NOT close modal
+    var ok = false;
+    var label = code;
+    try{
+      if(typeof processScanCode === "function"){
+        var res = processScanCode(code, { quiet: true });
+        ok = !!(res && res.ok);
+        if(res && res.name) label = res.name;
+      } else if(typeof lookupBarcode === "function"){
+        lookupBarcode(code);
+        ok = true;
+      }
+    }catch(e){ ok = false; }
+    showScanFeedback(ok, ok ? ("Scanned · " + label) : ("No product for " + code));
+    refreshScanCartTotal();
+    try{ if(window.__orbitRefreshMobileCartBar) window.__orbitRefreshMobileCartBar(); }catch(e){}
+    // Resume camera after short pause so continuous scanning works
+    var box = document.getElementById("scanCameraBox");
+    if(box && box.style.display !== "none"){
+      setTimeout(function(){
+        try{
+          if(document.getElementById("scanModal") && document.getElementById("scanModal").classList.contains("open")){
+            startCamera();
+          }
+        }catch(e){}
+      }, 900);
+    } else {
+      // manual mode: clear input for next scan
+      var inp = document.getElementById("scanManualInput");
+      if(inp){ inp.value = ""; setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 50); }
+    }
   }
   async function startCamera(){
     var box=document.getElementById("scanCameraBox");
@@ -2813,6 +2939,12 @@ document.getElementById("scanField").addEventListener("keydown",e=>{
     if(e.target && e.target.id==="scanModal") closeModal();
   });
   window.__orbitOpenScanModal=openModal;
+  window.__orbitCloseScanModal=closeModal;
+  window.__orbitRefreshScanCartTotal=refreshScanCartTotal;
+  // keep total live while modal open
+  document.addEventListener("click", function(){
+    try{ if(document.getElementById("scanModal")?.classList.contains("open")) refreshScanCartTotal(); }catch(e){}
+  }, true);
 })();
 
 function applyClients(list){
@@ -4468,7 +4600,7 @@ window.__calcOpen = false;
   <button type="button" class="btn mcb-clear" id="mCartClearBtn" title="Clear cart"
     onclick="event.stopPropagation();var b=document.getElementById('clearCartBtn'); if(b) b.click();">Clear</button>
   <button type="button" class="btn mcb-dl" id="mCartDlBtn"
-    onclick="event.stopPropagation();window.__orbitOpenDownloads&&window.__orbitOpenDownloads();" title="Downloads">Files</button>
+    onclick="event.stopPropagation();try{window.__orbitCloseMobileCart&&window.__orbitCloseMobileCart();}catch(e){}setTimeout(function(){window.__orbitOpenDownloads&&window.__orbitOpenDownloads();},50);" title="Downloads">Files</button>
   <button type="button" class="btn" id="mCartOpenBtn"
     onclick="event.stopPropagation();window.__orbitOpenMobileCart&&window.__orbitOpenMobileCart();">View bill</button>
 </div>
@@ -4735,7 +4867,28 @@ window.__calcOpen = false;
     document.body.style.overflow = "hidden";
     try{
       var cs = $("cartSide");
-      if(cs) cs.scrollTop = 0;
+      if(cs){
+        cs.scrollTop = 0;
+        cs.style.visibility = "visible";
+        cs.style.pointerEvents = "auto";
+        cs.style.transform = "translateY(0)";
+        cs.style.opacity = "1";
+        cs.style.zIndex = "10050";
+        cs.style.display = "flex";
+        cs.style.position = "fixed";
+        cs.style.left = "0";
+        cs.style.right = "0";
+        cs.style.bottom = "0";
+        cs.style.maxHeight = "min(88dvh, 760px)";
+        cs.style.background = "#fff";
+      }
+      var bd = $("mCartBackdrop");
+      if(bd){
+        bd.style.display = "block";
+        bd.style.zIndex = "10040";
+        bd.style.pointerEvents = "auto";
+        bd.style.background = "rgba(15,23,42,.45)";
+      }
     }catch(e){}
     try{ if(typeof renderCart === "function") renderCart(); }catch(e){}
     try{ if(window.__orbitShowCartPanel) window.__orbitShowCartPanel("selected"); }catch(e){}
@@ -4743,6 +4896,30 @@ window.__calcOpen = false;
   }
   function closeCart(){
     document.body.classList.remove("m-cart-open");
+    try{
+      var cs = $("cartSide");
+      if(cs){
+        cs.style.visibility = "";
+        cs.style.pointerEvents = "";
+        cs.style.transform = "";
+        cs.style.opacity = "";
+        cs.style.zIndex = "";
+        cs.style.display = "";
+        cs.style.position = "";
+        cs.style.left = "";
+        cs.style.right = "";
+        cs.style.bottom = "";
+        cs.style.maxHeight = "";
+        cs.style.background = "";
+      }
+      var bd = $("mCartBackdrop");
+      if(bd){
+        bd.style.display = "";
+        bd.style.zIndex = "";
+        bd.style.pointerEvents = "";
+        bd.style.background = "";
+      }
+    }catch(e){}
     if(!$("mobileMenu") || !$("mobileMenu").classList.contains("open"))
       document.body.style.overflow = "";
     try{ if(window.__orbitUpdateWakeLock) window.__orbitUpdateWakeLock(); }catch(e){}
