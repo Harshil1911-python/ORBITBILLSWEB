@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="app-icon-192.png">
 <title>Offline · OrbitBills</title>
 <link rel="icon" href="favicon.ico">
 <style>
@@ -28,11 +30,14 @@
   .btn{display:block;width:100%;padding:13px;border:0;border-radius:12px;background:#0b3d91;color:#fff;font-weight:700;margin-bottom:8px;text-decoration:none}
   .btn.ghost{background:#fff;color:#0b3d91;border:1px solid #dfe7f5}
 </style>
+<style id="orbit-overscroll-global">
+html, body { overscroll-behavior: none !important; overscroll-behavior-y: none !important; }
+</style>
 </head>
 <body>
   <div class="card">
     <h1>You're offline</h1>
-    <p>No internet connection right now. You can still open Billing if you already signed in on this device.</p>
+    <p>No internet — that's fine. OrbitBills keeps working from this device. Your data stays here.</p>
     <a class="btn" href="signin.html">Go to Sign in</a>
     <a class="btn ghost" href="billing.html">Open Billing</a>
     <a class="btn ghost" href="index.html">Home</a>
