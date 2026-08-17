@@ -1040,6 +1040,7 @@ input,select,textarea{
     <h4>Files</h4>
     <button type="button" id="mmDownloadsBtn" onclick="window.__orbitOpenDownloads&&window.__orbitOpenDownloads();return false;" style="background:var(--tint);color:var(--brand)">Downloads <span id="mmDlCount" style="margin-left:auto;font-size:12px;opacity:.8"></span></button>
     <h4>Actions</h4>
+    <button type="button" id="mmEnableNotif" onclick="(async function(){var ok=window.__orbitEnableNotifications&&await window.__orbitEnableNotifications();alert(ok?'Phone notifications enabled for bills, low stock and expiring items.':'Allow notifications in browser/phone settings for OrbitBills.');})();return false;">Enable notifications</button>
     <button type="button" data-mm="btnDayClose">Day close</button>
     <button type="button" data-mm="btnRecent">Recent bills</button>
     <button type="button" data-mm="btnRefreshSync">Sync</button>
@@ -1650,6 +1651,17 @@ function buildInvoiceExportDocument(inv, paper){
 <\/script>
 
 
+<script>
+(function orbitNotifHint(){
+  try{
+    if(typeof Notification === "undefined") return;
+    if(Notification.permission !== "default") return;
+    if(sessionStorage.getItem("orbit_notif_hint") === "1") return;
+    sessionStorage.setItem("orbit_notif_hint","1");
+    // soft: do not block UI; menu has Enable notifications
+  }catch(e){}
+})();
+</script>
 </body></html>`;
 }
 
