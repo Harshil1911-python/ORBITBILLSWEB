@@ -1198,6 +1198,73 @@ input,select,textarea{
   }
 }
 </style>
+
+<style id="orbit-cart-sheet-fix">
+@media (max-width: 768px) {
+  /* Backdrop BELOW the sheet — never cover buttons */
+  #mCartBackdrop.m-cart-backdrop,
+  body.m-cart-open #mCartBackdrop {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10040 !important;
+    background: rgba(15, 23, 42, 0.35) !important;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+  }
+  /* Cart sheet ABOVE backdrop — fully interactive */
+  body.m-cart-open #cartSide.cart-side,
+  body.m-cart-open aside#cartSide {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: min(88dvh, 760px) !important;
+    height: auto !important;
+    margin: 0 !important;
+    transform: translateY(0) !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    z-index: 10060 !important;
+    background: #ffffff !important;
+    border-radius: 18px 18px 0 0 !important;
+    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.22) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 12px 14px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  body.m-cart-open #cartSide *,
+  body.m-cart-open #cartSide button,
+  body.m-cart-open #cartSide .cart-top-tab,
+  body.m-cart-open #cartSide .btn,
+  body.m-cart-open #cartSide input,
+  body.m-cart-open #cartSide select {
+    pointer-events: auto !important;
+  }
+  body.m-cart-open #cartTopTabs {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 5 !important;
+    background: #fff !important;
+    pointer-events: auto !important;
+  }
+  /* Dim page content under sheet, but never the sheet itself */
+  body.m-cart-open .layout {
+    pointer-events: none !important;
+  }
+  body.m-cart-open #cartSide {
+    pointer-events: auto !important;
+  }
+}
+</style>
+
 </head>
 <body>
 <div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#ffffff;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:opacity .28s ease,visibility .28s ease;">
@@ -4870,26 +4937,41 @@ window.__calcOpen = false;
     document.body.style.overflow = "hidden";
     try{
       var cs = $("cartSide");
+      var bd = $("mCartBackdrop");
+      // Move sheet + backdrop to <body> so they escape .layout stacking/overflow
+      if(cs && cs.parentElement !== document.body){
+        try{ cs.dataset.orbitHome = "1"; document.body.appendChild(cs); }catch(e){}
+      }
+      if(bd && bd.parentElement !== document.body){
+        try{ document.body.appendChild(bd); }catch(e){}
+      }
+      if(bd){
+        bd.style.cssText = "display:block!important;position:fixed!important;inset:0!important;z-index:10040!important;background:rgba(15,23,42,0.35)!important;pointer-events:auto!important;opacity:1!important;margin:0!important;border:0!important;";
+      }
       if(cs){
         cs.scrollTop = 0;
-        cs.style.visibility = "visible";
-        cs.style.pointerEvents = "auto";
-        cs.style.transform = "translateY(0)";
-        cs.style.opacity = "1";
-        cs.style.zIndex = "10050";
-        cs.style.display = "flex";
-        cs.style.flexDirection = "column";
-        cs.style.position = "fixed";
-        cs.style.left = "0";
-        cs.style.right = "0";
-        cs.style.bottom = "0";
-        cs.style.top = "auto";
-        cs.style.width = "100%";
-        cs.style.maxHeight = "min(88dvh, 760px)";
-        cs.style.background = "#fff";
-        cs.style.overflow = "auto";
+        cs.style.cssText = [
+          "display:flex",
+          "flex-direction:column",
+          "position:fixed",
+          "left:0","right:0","bottom:0","top:auto",
+          "width:100%","max-width:100%",
+          "max-height:min(88dvh, 760px)",
+          "margin:0",
+          "transform:translateY(0)",
+          "visibility:visible",
+          "opacity:1",
+          "pointer-events:auto",
+          "z-index:10060",
+          "background:#ffffff",
+          "border-radius:18px 18px 0 0",
+          "box-shadow:0 -12px 40px rgba(15,23,42,0.22)",
+          "overflow-x:hidden",
+          "overflow-y:auto",
+          "-webkit-overflow-scrolling:touch",
+          "padding:12px 14px calc(16px + env(safe-area-inset-bottom, 0px))"
+        ].join(";") + ";";
       }
-      // Ensure Selected/Sale tabs work after open
       try{
         if(window.__orbitShowCartPanel) window.__orbitShowCartPanel("selected");
         var tabs = document.getElementById("cartTopTabs");
@@ -4900,19 +4982,8 @@ window.__calcOpen = false;
           tabs.style.background = "#fff";
           tabs.style.pointerEvents = "auto";
         }
-        ["cartTabSelected","cartTabSale","btnGoSaleTab","cartPanelSelected","cartPanelSale"].forEach(function(id){
-          var el = document.getElementById(id);
-          if(el){ el.style.pointerEvents = "auto"; }
-        });
       }catch(e){}
-      var bd = $("mCartBackdrop");
-      if(bd){
-        bd.style.display = "block";
-        bd.style.zIndex = "10040";
-        bd.style.pointerEvents = "auto";
-        bd.style.background = "rgba(15,23,42,.45)";
-      }
-    }catch(e){}
+    }catch(e){ console.warn("openCart chrome", e); }
     try{ if(typeof renderCart === "function") renderCart(); }catch(e){}
     try{ if(window.__orbitShowCartPanel) window.__orbitShowCartPanel("selected"); }catch(e){}
     try{ if(window.__orbitUpdateWakeLock) window.__orbitUpdateWakeLock(); }catch(e){}
@@ -4922,25 +4993,12 @@ window.__calcOpen = false;
     try{
       var cs = $("cartSide");
       if(cs){
-        cs.style.visibility = "";
-        cs.style.pointerEvents = "";
-        cs.style.transform = "";
-        cs.style.opacity = "";
-        cs.style.zIndex = "";
-        cs.style.display = "";
-        cs.style.position = "";
-        cs.style.left = "";
-        cs.style.right = "";
-        cs.style.bottom = "";
-        cs.style.maxHeight = "";
-        cs.style.background = "";
+        cs.style.cssText = "";
+        // keep node on body is fine; CSS hides when not .m-cart-open
       }
       var bd = $("mCartBackdrop");
       if(bd){
-        bd.style.display = "";
-        bd.style.zIndex = "";
-        bd.style.pointerEvents = "";
-        bd.style.background = "";
+        bd.style.cssText = "";
       }
     }catch(e){}
     if(!$("mobileMenu") || !$("mobileMenu").classList.contains("open"))
