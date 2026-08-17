@@ -703,13 +703,16 @@ window.__orbitEnsureChart = function(){ return window.__orbitLoadScript('https:/
 </script>
 </head>
 <body>
-<div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#f5f8fe;flex-direction:column;padding:20px 16px;">
-  <div class="sk-grid"><div class="sk-tile"></div><div class="sk-tile"></div><div class="sk-tile"></div><div class="sk-tile"></div></div>
-  <div class="sk-card">
-    <div class="sk-row"><div class="sk-avatar"></div><div class="sk-block"><div class="sk-line" style="width:55%"></div><div class="sk-line" style="width:35%;height:10px"></div></div></div>
-    <div class="sk-row"><div class="sk-avatar"></div><div class="sk-block"><div class="sk-line" style="width:48%"></div><div class="sk-line" style="width:30%;height:10px"></div></div></div>
+<div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#ffffff;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+  <img src="logo.png" alt="OrbitBills" style="width:120px;height:120px;object-fit:contain;display:block;margin-bottom:18px;animation:orbitBootPulse 1.2s ease-in-out infinite" onerror="this.src='app-icon-192.png'">
+  <div style="color:#000;font-weight:700;font-size:18px;font-family:system-ui,sans-serif;margin-bottom:6px">OrbitBills</div>
+  <div style="color:#333;font-size:13px;opacity:.7;margin-bottom:20px">Loading…</div>
+  <div style="width:120px;height:3px;border-radius:3px;background:#e8eef8;overflow:hidden">
+    <div style="height:100%;width:40%;background:#0b3d91;border-radius:3px;animation:orbitBootBar 1s ease-in-out infinite"></div>
   </div>
 </div>
+<style>@keyframes orbitBootPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes orbitBootBar{0%{transform:translateX(-100%)}100%{transform:translateX(280%)}}</style>
+
 <script>
 (function(){
   function killBoot(){
@@ -737,7 +740,7 @@ window.__orbitEnsureChart = function(){ return window.__orbitLoadScript('https:/
 
 
 <div class="mobile-bar">
-  <div class="brand"><img src="logo.png" alt="TechSerenia logo" onerror="this.style.display='none'"></div>
+  <div class="brand"><img src="logo.png" alt="OrbitBills" onerror="this.style.display='none'"></div>
   <button class="hamburger" id="hamburgerBtn" aria-label="Open menu">&#9776;</button>
 </div>
 <button type="button" id="panelCloseFloat" aria-label="Close screen" title="Close">×</button>
@@ -746,11 +749,11 @@ window.__orbitEnsureChart = function(){ return window.__orbitLoadScript('https:/
 <div class="layout">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo-fixed">
-      <img src="logo.png" alt="TechSerenia logo" onerror="this.style.display='none'">
+      <img src="logo.png" alt="OrbitBills" onerror="this.style.display='none'">
     </div>
     <div class="sidebar-scroll">
     <div class="brand" style="display:none">
-      <img src="logo.png" alt="TechSerenia logo" onerror="this.style.display='none'">
+      <img src="logo.png" alt="OrbitBills" onerror="this.style.display='none'">
     </div>
     <button class="nav-item active" data-panel="overview"><span class="nav-icon">OV</span>Overview</button>
     <button class="nav-item" data-panel="notifications"><span class="nav-icon">NT</span>Notifications<span class="nav-badge" id="notifNavBadge" style="display:none"></span></button>
@@ -825,7 +828,7 @@ window.__orbitEnsureChart = function(){ return window.__orbitLoadScript('https:/
 
       <button type="button" id="signOutBtn" style="font-size:13px;font-weight:600;color:var(--red);display:flex;align-items:center;padding:10px 12px;min-height:44px;background:none;border:none;width:100%;text-align:left;cursor:pointer;">Sign out</button>
       <div class="mm-brand-footer">
-        <img src="logo.png" alt="TechSerenia" class="mm-brand-logo" onerror="this.style.display='none'">
+        <img src="logo.png" alt="OrbitBills" class="mm-brand-logo" onerror="this.style.display='none'">
         <div class="mm-brand-name">TechSerenia</div>
         <p class="mm-brand-about">OrbitBills is built by TechSerenia — simple, offline-first billing for shops in India. Sell, track stock, and manage invoices on your phone without depending on the cloud.</p>
         <a class="mm-brand-link" href="aboutus.html">About us</a>

@@ -14,7 +14,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="OrbitBills">
-<meta name="theme-color" content="#0b3d91">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
 <title>GST filing · TechSerenia</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -49,8 +50,19 @@ h1,h2,h3{font-family:'Space Grotesk',sans-serif}
 .btn{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:13px;padding:9px 14px;border-radius:9px;border:1px solid transparent;cursor:pointer;background:var(--blue-deep);color:#fff}
 .btn-ghost{background:#fff;color:var(--blue-deep);border-color:var(--border)}
 .btn-sm{padding:7px 11px;font-size:12.5px}
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-.toolbar input,.toolbar select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px}
+.toolbar{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  margin:0 0 14px;padding:10px 12px;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--border);border-radius:14px;
+  position:sticky;top:0;z-index:30;
+  box-shadow:0 4px 16px rgba(15,23,42,.04);
+}
+.toolbar input,.toolbar select{padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:#fff}
+.toolbar .btn{min-height:40px;border-radius:10px;font-weight:600}
+.toolbar label{font-size:11px;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.04em}
+
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:9px 10px;color:var(--slate);font-size:11px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border)}
 td{padding:9px 10px;border-bottom:1px solid var(--border)}
@@ -122,7 +134,18 @@ td{padding:9px 10px;border-bottom:1px solid var(--border)}
     gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:5;
     background:var(--blue-tint-2);padding:8px 0 10px;margin-bottom:10px
   }
-  .toolbar input,.toolbar select{min-height:44px;font-size:16px;flex:1 1 120px;border-radius:10px}
+  .toolbar input,.toolbar select{min-height:44px;font-size:16px;flex:1 1 110px;border-radius:12px}
+  .toolbar{
+    position:sticky!important;top:calc(52px + env(safe-area-inset-top,0px))!important;z-index:35!important;
+    background:rgba(255,255,255,.96)!important;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    padding:10px 12px!important;border-radius:14px;border:1px solid var(--border);
+    box-shadow:0 6px 20px rgba(15,23,42,.06);gap:8px;margin-bottom:12px;
+  }
+  .toolbar .btn{min-height:44px;border-radius:12px;font-size:14px}
+  .main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right));padding-bottom:max(24px,env(safe-area-inset-bottom))}
+  .mobile-bar{padding-top:max(10px,env(safe-area-inset-top))}
+
   .btn,.btn-sm{min-height:44px;border-radius:10px;padding:10px 14px;font-size:13px}
   .card{padding:14px;border-radius:14px;margin-bottom:12px}
   .hint{font-size:12px;padding:10px;margin-bottom:10px}
@@ -232,13 +255,16 @@ td{padding:9px 10px;border-bottom:1px solid var(--border)}
 </script>
 </head>
 <body>
-<div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#f5f8fe;flex-direction:column;padding:20px 16px;">
-  <div class="sk-grid"><div class="sk-tile"></div><div class="sk-tile"></div><div class="sk-tile"></div><div class="sk-tile"></div></div>
-  <div class="sk-card">
-    <div class="sk-row"><div class="sk-avatar"></div><div class="sk-block"><div class="sk-line" style="width:55%"></div><div class="sk-line" style="width:35%;height:10px"></div></div></div>
-    <div class="sk-row"><div class="sk-avatar"></div><div class="sk-block"><div class="sk-line" style="width:48%"></div><div class="sk-line" style="width:30%;height:10px"></div></div></div>
+<div id="orbitBoot" style="display:flex;position:fixed;inset:0;z-index:2147483646;background:#ffffff;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+  <img src="logo.png" alt="OrbitBills" style="width:120px;height:120px;object-fit:contain;display:block;margin-bottom:18px;animation:orbitBootPulse 1.2s ease-in-out infinite" onerror="this.src='app-icon-192.png'">
+  <div style="color:#000;font-weight:700;font-size:18px;font-family:system-ui,sans-serif;margin-bottom:6px">OrbitBills</div>
+  <div style="color:#333;font-size:13px;opacity:.7;margin-bottom:20px">Loading…</div>
+  <div style="width:120px;height:3px;border-radius:3px;background:#e8eef8;overflow:hidden">
+    <div style="height:100%;width:40%;background:#0b3d91;border-radius:3px;animation:orbitBootBar 1s ease-in-out infinite"></div>
   </div>
 </div>
+<style>@keyframes orbitBootPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes orbitBootBar{0%{transform:translateX(-100%)}100%{transform:translateX(280%)}}</style>
+
 <script>
 (function(){
   function killBoot(){
@@ -266,7 +292,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--border)}
 
 
 <div class="mobile-bar">
-  <div class="brand" style="padding:0"><img src="logo.png" alt="TechSerenia" onerror="this.style.display='none'"></div>
+  <div class="brand" style="padding:0"><img src="logo.png" alt="OrbitBills" onerror="this.style.display='none'"></div>
   <button class="hamburger" id="hamburgerBtn" type="button" aria-label="Open menu">&#9776;</button>
 </div>
 <div class="overlay-scrim" id="mobileScrim"></div>
@@ -304,14 +330,14 @@ td{padding:9px 10px;border-bottom:1px solid var(--border)}
     </div>
   </aside>
   <main class="main">
-    <div class="toolbar no-print">
-      <label style="font-size:12px;font-weight:600;color:var(--slate)">From</label>
-      <input type="date" id="fromDate">
-      <label style="font-size:12px;font-weight:600;color:var(--slate)">To</label>
-      <input type="date" id="toDate">
+    <div class="toolbar no-print acct-period-bar" id="acctPeriodBar">
+      <label for="fromDate">From</label>
+      <input type="date" id="fromDate" aria-label="From date">
+      <label for="toDate">To</label>
+      <input type="date" id="toDate" aria-label="To date">
       <button class="btn btn-sm" type="button" id="btnApply">Apply</button>
       <button class="btn btn-ghost btn-sm" type="button" id="btnThisMonth">This month</button>
-      <button class="btn btn-ghost btn-sm" type="button" id="btnPrevMonth">Previous month</button>
+      <button class="btn btn-ghost btn-sm" type="button" id="btnPrevMonth">Previous</button>
       <button class="btn btn-ghost btn-sm" type="button" onclick="window.print()">Print</button>
     </div>
 
