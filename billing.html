@@ -331,7 +331,7 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
     display:block!important;
     z-index:10040!important;
     pointer-events:auto!important;
-    background:rgba(15,23,42,.45)!important;
+    background:transparent!important;
   }
   body.m-cart-open .m-cart-close{
     display:inline-flex!important;
@@ -350,7 +350,7 @@ th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04
   }
 
   .m-cart-backdrop{
-    display:none;position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:65
+    display:none;position:fixed;inset:0;background:transparent;z-index:65
   }
 
   /* Tabs: horizontal scroll */
@@ -1133,7 +1133,7 @@ input,select,textarea{
     position: fixed !important;
     inset: 0 !important;
     z-index: 10040 !important;
-    background: rgba(15,23,42,.45) !important;
+    background: transparent !important;
     pointer-events: auto !important;
   }
   body.m-cart-open .pos-bottom-nav,
@@ -1201,18 +1201,20 @@ input,select,textarea{
 
 <style id="orbit-cart-sheet-fix">
 @media (max-width: 768px) {
-  /* Backdrop BELOW the sheet — never cover buttons */
+  /* No full-screen dim — backdrop is invisible and only closes on tap above sheet */
   #mCartBackdrop.m-cart-backdrop,
   body.m-cart-open #mCartBackdrop {
     display: block !important;
     position: fixed !important;
     inset: 0 !important;
     z-index: 10040 !important;
-    background: rgba(15, 23, 42, 0.35) !important;
-    pointer-events: auto !important;
+    background: transparent !important;
     opacity: 1 !important;
+    pointer-events: auto !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
-  /* Cart sheet ABOVE backdrop — fully interactive */
+  /* Cart sheet: full brightness, above everything */
   body.m-cart-open #cartSide.cart-side,
   body.m-cart-open aside#cartSide {
     position: fixed !important;
@@ -1228,24 +1230,23 @@ input,select,textarea{
     transform: translateY(0) !important;
     visibility: visible !important;
     opacity: 1 !important;
+    filter: none !important;
     pointer-events: auto !important;
     display: flex !important;
     flex-direction: column !important;
     z-index: 10060 !important;
     background: #ffffff !important;
     border-radius: 18px 18px 0 0 !important;
-    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.22) !important;
+    box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.18) !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     padding: 12px 14px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
   }
-  body.m-cart-open #cartSide *,
-  body.m-cart-open #cartSide button,
-  body.m-cart-open #cartSide .cart-top-tab,
-  body.m-cart-open #cartSide .btn,
-  body.m-cart-open #cartSide input,
-  body.m-cart-open #cartSide select {
+  body.m-cart-open #cartSide,
+  body.m-cart-open #cartSide * {
+    opacity: 1 !important;
+    filter: none !important;
     pointer-events: auto !important;
   }
   body.m-cart-open #cartTopTabs {
@@ -1253,14 +1254,17 @@ input,select,textarea{
     top: 0 !important;
     z-index: 5 !important;
     background: #fff !important;
-    pointer-events: auto !important;
   }
-  /* Dim page content under sheet, but never the sheet itself */
+  /* Keep page usable under sheet — no dim filter on layout */
   body.m-cart-open .layout {
-    pointer-events: none !important;
+    filter: none !important;
+    opacity: 1 !important;
   }
-  body.m-cart-open #cartSide {
-    pointer-events: auto !important;
+  body.m-cart-open header.app-bar,
+  body.m-cart-open .pos-bottom-nav,
+  body.m-cart-open .m-cart-bar {
+    filter: none !important;
+    opacity: 1 !important;
   }
 }
 </style>
@@ -4946,7 +4950,7 @@ window.__calcOpen = false;
         try{ document.body.appendChild(bd); }catch(e){}
       }
       if(bd){
-        bd.style.cssText = "display:block!important;position:fixed!important;inset:0!important;z-index:10040!important;background:rgba(15,23,42,0.35)!important;pointer-events:auto!important;opacity:1!important;margin:0!important;border:0!important;";
+        bd.style.cssText = "display:block!important;position:fixed!important;inset:0!important;z-index:10040!important;background:transparent!important;pointer-events:auto!important;opacity:1!important;margin:0!important;border:0!important;";
       }
       if(cs){
         cs.scrollTop = 0;
